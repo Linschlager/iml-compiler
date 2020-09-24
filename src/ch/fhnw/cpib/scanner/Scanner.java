@@ -10,9 +10,10 @@ import java.util.regex.Pattern;
 
 public class Scanner {
 
-    static final Pattern keyword = Pattern.compile("^(bool|call|const|copy|debugin|debugout|divE|divF|divT|do|else|endfun|endif|endproc|endprogram|endwhile|false|fun|global|if|init|in|inout|int1024|int32|int64|local|modE|modF|modT|not|out|proc|program|ref|returns|skip|then|true|var|while)\\s");
+    static final Pattern keyword = Pattern.compile("^(bool|call|const|copy|debugin|debugout|divE|divF|divT|do|else|endfun|endif|endproc|endprogram|endwhile|fun|global|if|init|in|inout|int1024|int32|int64|local|modE|modF|modT|not|out|proc|program|ref|returns|skip|then|var|while)\\s");
     static final Pattern relopr = Pattern.compile("^(<=|>=|<|>|=)");
-    static final Pattern literal = Pattern.compile("^([0-9]+)");
+    static final Pattern operator = Pattern.compile("^([+\\-*/])");
+    static final Pattern literal = Pattern.compile("^([0-9]+|true\\s|false\\s)");
     static final Pattern ident = Pattern.compile("^([a-zA-Z][a-zA-Z0-9]*)");
     static final Pattern whitespace = Pattern.compile("^[ \t\n\r]+");
 
@@ -37,14 +38,23 @@ public class Scanner {
                 tokenList.add(new RelativeOperatorToken(r));
 
                 didMatch = true;
+            } else if ((m = doesMatch(inputString, literal)) != null) {
+                var r = m.group(1); // Get second capture group (innermost brackets) first would be the full match. But we don't want to include adjacent necessary characters. (e.g. trailing whitespace)
+                if (Character.isDigit(r.charAt(0))) {
+                    tokenList.add(new LiteralToken(Integer.parseInt(r)));
+                } else {
+                    tokenList.add(new LiteralToken(Boolean.parseBoolean(r.trim()))); // Remove trailing space
+                }
+
+                didMatch = true;
+            } else if ((m = doesMatch(inputString, operator)) != null) {
+                var r = m.group(1); // Get second capture group (innermost brackets) first would be the full match. But we don't want to include adjacent necessary characters. (e.g. trailing whitespace)
+                tokenList.add(new OperatorToken(r));
+
+                didMatch = true;
             } else if ((m = doesMatch(inputString, ident)) != null) {
                 var r = m.group(1); // Get second capture group (innermost brackets) first would be the full match. But we don't want to include adjacent necessary characters. (e.g. trailing whitespace)
                 tokenList.add(new IdentifierToken(r));
-
-                didMatch = true;
-            } else if ((m = doesMatch(inputString, literal)) != null) {
-                var r = m.group(1); // Get second capture group (innermost brackets) first would be the full match. But we don't want to include adjacent necessary characters. (e.g. trailing whitespace)
-                tokenList.add(new LiteralToken(Integer.parseInt(r)));
 
                 didMatch = true;
             } else if ((m = doesMatch(inputString, whitespace)) != null) {
@@ -55,7 +65,7 @@ public class Scanner {
             if (didMatch) {
                 inputString = m.replaceFirst("");
             } else {
-                throw new LexicalError();
+                throw new LexicalError(inputString);
             }
         }
         tokenList.add(new KeywordToken("SENTINEL"));

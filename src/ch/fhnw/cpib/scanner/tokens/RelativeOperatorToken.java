@@ -19,7 +19,7 @@ public class RelativeOperatorToken extends Token {
             case "<": return RelativeOperator.LT;
             case "=": return RelativeOperator.EQ;
             default:
-                throw new LexicalError();
+                throw new LexicalError(relativeOperatorString);
         }
     }
 
