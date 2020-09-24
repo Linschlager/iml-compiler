@@ -1,0 +1,18 @@
+digraph finite_state_machine {
+    //rankdir=LR;
+
+    size = "8,5"
+    node [shape = doublecircle]; S_0; // starting state
+    node [shape = circle];
+
+    S_0 -> S_1 [label = "[a-z]"]
+    S_1 -> S_1 [label = "[a-z0-9]"]
+    S_1 -> S_0 [label = "other\naccept identifier\ni--"]
+    S_0 -> S_2 [label = "[0-9]"]
+    S_2 -> S_2 [label = "[0-9]"]
+    S_2 -> S_0 [label = "other\naccept literal\ni--"]
+    S_0 -> S_0 [label = "+\naccept plus"]
+    S_0 -> S_0 [label = "Whitespace"]
+    S_0 -> S_0 [label = "other\nthrow Exception"]
+
+}
