@@ -1,6 +1,7 @@
 package ch.fhnw.cpib.scanner.tokens;
 
 import ch.fhnw.cpib.scanner.LexicalError;
+import ch.fhnw.cpib.scanner.enums.Operator;
 
 import java.util.HashMap;
 

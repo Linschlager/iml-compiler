@@ -1,6 +1,7 @@
 package ch.fhnw.cpib.scanner.tokens;
 
 import ch.fhnw.cpib.scanner.LexicalError;
+import ch.fhnw.cpib.scanner.enums.RelativeOperator;
 
 public class RelativeOperatorToken extends Token {
     private final RelativeOperator relOp;

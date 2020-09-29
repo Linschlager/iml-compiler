@@ -1,4 +1,4 @@
-package ch.fhnw.cpib.scanner.tokens;
+package ch.fhnw.cpib.scanner.enums;
 
 public enum Operator {
 
