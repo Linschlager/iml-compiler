@@ -1,1 +1,11 @@
-foo while 3+89 while+ foobar+ +while true false
+program
+    init x := 10
+    init y := 20
+
+    if x+y > 100 then
+        print x divE 10
+        print y divT 20
+    else if x+y = 100 then
+        print x+y
+    endif
+endprogram

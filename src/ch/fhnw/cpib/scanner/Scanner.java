@@ -10,9 +10,9 @@ import java.util.regex.Pattern;
 
 public class Scanner {
 
-    static final Pattern keyword = Pattern.compile("^(bool|call|const|copy|debugin|debugout|divE|divF|divT|do|else|endfun|endif|endproc|endprogram|endwhile|fun|global|if|init|in|inout|int1024|int32|int64|local|modE|modF|modT|not|out|proc|program|ref|returns|skip|then|var|while)\\s");
+    static final Pattern keyword = Pattern.compile("^(bool|call|const|copy|debugin|debugout|do|else|endfun|endif|endproc|endprogram|endwhile|fun|global|if|init|in|inout|int1024|int32|int64|local|not|out|proc|program|ref|returns|skip|then|var|while)\\s");
     static final Pattern relopr = Pattern.compile("^(<=|>=|<|>|=)");
-    static final Pattern operator = Pattern.compile("^([+\\-*/])");
+    static final Pattern operator = Pattern.compile("^([+\\-*]|:=|modE|modF|modT|divE|divF|divT)");
     static final Pattern literal = Pattern.compile("^([0-9]+|true\\s|false\\s)");
     static final Pattern ident = Pattern.compile("^([a-zA-Z][a-zA-Z0-9]*)");
     static final Pattern whitespace = Pattern.compile("^[ \t\n\r]+");
