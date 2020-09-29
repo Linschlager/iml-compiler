@@ -1,4 +1,5 @@
-program
+program MyProgram (in hello:bool, out b:int1024)
+do
     init x := 10
     init y := 20
 
