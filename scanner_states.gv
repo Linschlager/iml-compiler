@@ -1,0 +1,48 @@
+digraph finite_state_machine {
+    //rankdir=LR;
+    size = "8,8"
+    ratio = "fill"
+    node [shape = doublecircle]; S_0; // starting state
+    node [shape = circle];
+
+    S_0 -> S_1 [label = "[a-zA-Z]"]
+    S_1 -> S_1 [label = "[a-zA-Z0-9_]"]
+    S_1 -> S_0 [label = "other\naccept identifier\ni--"]
+    S_0 -> S_2 [label = "[0-9]"]
+    S_2 -> S_2 [label = "[0-9]"]
+    S_2 -> S_0 [label = "other\naccept literal\ni--"]
+    S_0 -> S_0 [label = "[\\(,\\);=+-*]\naccept symbol"]
+    S_0 -> S_0 [label = "Whitespace"]
+    S_0 -> Error [label = "other"]
+
+    S_0 -> S_3 [label = "/"]
+    S_3 -> S_4 [label = "/"]
+    S_3 -> Error [label = "other"]
+    S_4 -> S_4 [label = "[^\\n]"]
+    S_4 -> S_0 [label = "other\naccept comment\ni--"]
+
+    S_0 -> S_5 [label = ":"]
+    S_5 -> S_0 [label = "=\nccept :="]
+    S_5 -> S_0 [label = "other\nccept :\ni--"]
+    
+    S_3 -> S_6 [label = "\\ "]
+    S_3 -> S_0 [label = "=\naccept /="]
+    S_3 -> Error [label = "other"]
+    S_6 -> S_0 [label = "?\naccept /\\?"]
+    S_6 -> Error [label = "other"]
+
+    S_0 -> S_7 [label = "\\ "]
+    S_7 -> S_8 [label = "/"]
+    S_7 -> Error [label = "other"]
+    S_8 -> S_0 [label = "?\naccept \\/?"]
+    S_8 -> Error [label = "other"]
+
+    S_0 -> S_9 [label = "<"]
+    S_9 -> S_0 [label = "=\naccept <="]
+    S_9 -> S_0 [label = "other\naccept <\ni--"]
+
+    S_0 -> S_10 [label = ">"]
+    S_10 -> S_0 [label = "=\naccept >="]
+    S_10 -> S_0 [label = "other\naccept >\ni--"]
+
+}
