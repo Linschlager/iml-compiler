@@ -20,7 +20,7 @@ do
   p2 init := point3D(p1.x, p1.y, 0);
   p2.z    := p2.z + 10;
  
-  vec init := vector2D(p1, point2D(0, 0) init)
+  vec init := vector2D(p1, point2D(0, 0))
  
 endprogram
 ```
@@ -50,7 +50,7 @@ TODO (neues keyword record und neues symbol "."🤔)
 ```
 <typedIdents> ::= <typedIdent> [',' <typedIdents>]
 <recordParamList> ::= '(' <typedIdents> ')'
-<recordDecl> ::= record <ident> <recordParamList>
+<recordShapeDecl> ::= record <ident> <recordParamList>
 
 <type> ::= bool
          | <inttype>
@@ -59,7 +59,7 @@ TODO (neues keyword record und neues symbol "."🤔)
 <decl> ::= <stoDecl>
          | <funDecl>
          | <procDecl>
-         | <recordDecl> // <-
+         | <recordShapeDecl> // <-
 ```
 ### Init and Usage
 ```
@@ -70,10 +70,9 @@ TODO (neues keyword record und neues symbol "."🤔)
            | '(' <expr> ')'
 
 <recordExpr> ::= <ident> {'.' <recordExpr>}
-<recordDecl> ::= <ident> <exprList> // recordName(whatever,how,many,elements)
+<recordConstructDecl> ::= <ident> <exprList> // recordName(whatever,how,many,elements)
 <cmd> ::= skip
-        | <expr> := <expr>
-        | <recordExpr> := <recordExpr> | <recordDecl> // <-
+        | <expr> := <expr> | <recordConstructDecl> // <-
         | if <expr> then <cpsCmd>
          [else <cpsCmd>] endif
         | while <expr> do <cpsCmd> endwhile
