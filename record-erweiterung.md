@@ -20,7 +20,7 @@ do
   p2 init := point3D(p1.x, p1.y, 0);
   p2.z    := p2.z + 10;
  
-  vec init := vector2D(p1, point2d(0, 0))
+  vec init := vector2D(p1, point2D(0, 0))
  
 endprogram
 ```
@@ -35,7 +35,7 @@ endprogram
     - const: nur Initialisierung möglich, keine updates der Felder
     - var: Initialisierung & Updates möglich
     - Reads sind in beiden Fällen nach Initialisierung beliebig möglich
-- Initialisiert werden Records mit ihrem Namen und der Felder in runden Klammern (in der gleichen reihenfolge wie sie im Record deklaration sind)
+- Initialisiert werden Records mit ihrem Namen und der Felder in runden Klammern (in der gleichen Reihenfolge wie sie in der Record-Deklaration sind)
     - Alternativ könnten wir uns auch vorstellen das man den Namen des Records auch weglassen kann und/oder dass Felder auch mit explizitem Namen initialisiert werden können:  
     `p2 init := { x := p1.x, z := 0, y := p1.y }; // oder so etwas in dieser Richtung `
 - Zugegriffen wird auf die Felder mit Punktnotation
@@ -46,5 +46,37 @@ endprogram
 TODO (neues keyword record und neues symbol "."🤔)
 
 ## Grammatikalische Erweiterungen zu IML
+### Deklarationen
+```
+<typedIdents> ::= <typedIdent> [',' <typedIdents>]
+<recordParamList> ::= '(' <typedIdents> ')'
+<recordShapeDecl> ::= record <ident> <recordParamList>
 
-TODO
+<type> ::= bool
+         | <inttype>
+         | <ident> // <- Für record-typen
+
+<decl> ::= <stoDecl>
+         | <funDecl>
+         | <procDecl>
+         | <recordShapeDecl> // <-
+```
+### Init and Usage
+```
+<factor> ::= <literal>
+           | <ident> [init | <exprList>]
+           | <monopr> <factor>
+           | <recordExpr> // <-
+           | '(' <expr> ')'
+
+<recordExpr> ::= <ident> {'.' <recordExpr>}
+<recordConstructDecl> ::= <ident> <exprList> // recordName(whatever,how,many,elements)
+<cmd> ::= skip
+        | <expr> := <expr> | <recordConstructDecl> // <-
+        | if <expr> then <cpsCmd>
+         [else <cpsCmd>] endif
+        | while <expr> do <cpsCmd> endwhile
+        | call <ident> <exprList> [<globInits>]
+        | debugin <expr>
+        | debugout <expr>
+```
