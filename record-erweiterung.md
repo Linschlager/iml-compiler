@@ -49,8 +49,7 @@ TODO (neues keyword record und neues symbol "."🤔)
 ### Deklarationen
 ```
 <typedIdents> ::= <typedIdent> [',' <typedIdents>]
-<recordParamList> ::= '(' <typedIdents> ')'
-<recordShapeDecl> ::= record <ident> <recordParamList>
+<recordShapeDecl> ::= record <ident> '(' <typedIdents> ')'
 
 <type> ::= bool
          | <inttype>
