@@ -72,7 +72,7 @@ TODO (neues keyword record und neues symbol "."🤔)
 <recordExpr> ::= <ident> {'.' <recordExpr>}
 <recordConstructDecl> ::= <ident> <exprList> // recordName(whatever,how,many,elements)
 <cmd> ::= skip
-        | <expr> := <expr> | <recordConstructDecl> // <-
+        | <expr> := (<expr> | <recordConstructDecl>) // <-
         | if <expr> then <cpsCmd>
          [else <cpsCmd>] endif
         | while <expr> do <cpsCmd> endwhile
