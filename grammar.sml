@@ -40,6 +40,8 @@ datatype term
   | THEN
   | TYPE
   | WHILE
+  | RECORD
+  | ACCESSOPR
 
 val string_of_term =
   fn ADDOPR  => "ADDOPR"
@@ -81,6 +83,8 @@ val string_of_term =
    | THEN => "THEN"
    | TYPE => "TYPE"
    | WHILE => "WHILE"
+   | RECORD => "RECORD"
+   | ACCESSOPR => "ACCESSOPR"
 
 datatype nonterm
   = cmd
@@ -102,7 +106,7 @@ datatype nonterm
   | optGlobalCpsDecl
   | optGlobalGlobImps
   | optGlobInits (* only occurs optionally, so no non-optional nts was made *)
-  | optInitOrExprList (* From Implementation View *)
+  | optInitOrExprListOrRecordAccess (* From Implementation View *)
   | optLocalCpsStoDecl
   | optMechmode
   | optParamRepCommaParam
@@ -130,6 +134,11 @@ datatype nonterm
   | term2
   | term3
   | typedIdent
+  | typeOrRecord
+  | recordShapeDecl
+  | repCommaTypedIdent
+  | recordAccess
+  | optRecordAccess
 
 val string_of_nonterm =
   fn cmd => "cmd"
@@ -151,7 +160,7 @@ val string_of_nonterm =
        | optGlobalCpsDecl => "optGlobalCpsDecl"
        | optGlobalGlobImps => "optGlobalGlobImps"
        | optGlobInits => "optGlobInits"
-       | optInitOrExprList => "optInitOrExprList"
+       | optInitOrExprListOrRecordAccess => "optInitOrExprListOrRecordAccess"
        | optLocalCpsStoDecl => "optLocalCpsStoDecl"
        | optMechmode => "optMechmode"
        | optParamRepCommaParam => "optParamRepCommaParam"
@@ -179,6 +188,11 @@ val string_of_nonterm =
        | term2 => "term2"
        | term3 => "term3"
        | typedIdent => "typedIdent"
+       | typeOrRecord => "typeOrRecord"
+       | recordShapeDecl => "recordShapeDecl"
+       | repCommaTypedIdent => "repCommaTypedIdent"
+       | recordAccess => "recordAccess"
+       | optRecordAccess => "optRecordAccess"
 
 val string_of_gramsym = (string_of_term, string_of_nonterm)
 
@@ -204,7 +218,10 @@ val productions =
     [[T CHANGEMODE],
      []]),
 (typedIdent,
-    [[T IDENT, T COLON, T TYPE]]),
+    [[T IDENT, T COLON, N typeOrRecord]]),
+(typeOrRecord,
+    [[T TYPE],
+     [T IDENT]]),
 (repCommaProgParam,
     [[T COMMA, N progParam, N repCommaProgParam],
     []]),
@@ -216,7 +233,8 @@ val productions =
 (decl,
     [[N stoDecl],
     [N funDecl],
-    [N procDecl]]),
+    [N procDecl],
+    [N recordShapeDecl]]),
 (stoDecl,
     [[N optChangemode, N typedIdent]]),
 (funDecl,
@@ -301,12 +319,13 @@ val productions =
      []]),
 (factor,
     [[T LITERAL],
-     [T IDENT, N optInitOrExprList],
+     [T IDENT, N optInitOrExprListOrRecordAccess],
      [N monadicOpr, N factor],
      [T LPAREN, N expr, T RPAREN]]),
-(optInitOrExprList,
+(optInitOrExprListOrRecordAccess,
     [[T INIT],
      [N exprList],
+     [N recordAccess],
      []]),
 (exprList,
     [[T LPAREN, N optExprRepCommaExpr, T RPAREN]]),
@@ -318,7 +337,18 @@ val productions =
      []]),
 (monadicOpr,
     [[T NOTOPR],
-     [T ADDOPR]])
+     [T ADDOPR]]),
+
+(recordAccess,
+    [[T ACCESSOPR, T IDENT, N optRecordAccess]]),
+(optRecordAccess,
+    [[T ACCESSOPR, T IDENT, N optRecordAccess],
+     []]),
+(recordShapeDecl,
+    [[T RECORD, T IDENT, T LPAREN, N typedIdent, N repCommaTypedIdent, T RPAREN]]),
+(repCommaTypedIdent,
+    [[T COMMA, N typedIdent, N repCommaTypedIdent],
+    []])
 ] (* no comma on last entry *)
 
 val S = program
