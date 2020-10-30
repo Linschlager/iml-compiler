@@ -5,16 +5,15 @@ import java.util.Map;
 import java.util.Optional;
 
 public enum Terminal {
-    // reserved identifiers
-    BOOL,
+    ADDOPR,
+    BECOMES,
+    BOOLOPR,
     CALL,
-    CONST,
-    COPY,
+    CHANGEMODE,
+    COLON,
+    COMMA,
     DEBUGIN,
     DEBUGOUT,
-    DIV_E,
-    DIV_F,
-    DIV_T,
     DO,
     ELSE,
     ENDFUN,
@@ -22,103 +21,80 @@ public enum Terminal {
     ENDPROC,
     ENDPROGRAM,
     ENDWHILE,
-    FALSE,
     FUN,
+    FLOWMODE,
     GLOBAL,
+    IDENT,
     IF,
-    IN,
     INIT,
-    INOUT,
-    INT_1024,
-    INT_32,
-    INT_64,
+    LITERAL,
     LOCAL,
-    MOD_E,
-    MOD_F,
-    MOD_T,
-    NOT,
-    OUT,
+    LPAREN,
+    MECHMODE,
+    MULTOPR,
+    NOTOPR,
     PROC,
     PROGRAM,
-    REF,
+    RELOPR,
     RETURNS,
+    RPAREN,
     SKIP,
-    THEN,
-    TRUE,
-    VAR,
-    WHILE,
-    // symbols
-    PAREN_OPEN,
-    PAREN_CLOSE,
-    COMMA,
-    COLON,
     SEMICOLON,
-    OP_ASSIGN,
-    OP_COND_AND,
-    OP_COND_OR,
-    OP_EQ,
-    OP_NEQ,
-    OP_LT,
-    OP_GT,
-    OP_LTE,
-    OP_GTE,
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    // other
-    NUMBER_LITERAL,
-    IDENTIFIER,
-    COMMENT,
-    SENTINEL;
+    SENTINEL,
+    THEN,
+    TYPE,
+    WHILE,
+    RECORD,
+    ACCESSOPR;
 
-    private static final Map<String, Terminal> keywordMappings;
+    private static final Map<String, Token> keywordMappings;
 
     static {
         keywordMappings = new HashMap<>();
-        keywordMappings.put("bool", BOOL);
-        keywordMappings.put("call", CALL);
-        keywordMappings.put("const", CONST);
-        keywordMappings.put("copy", COPY);
-        keywordMappings.put("debugin", DEBUGIN);
-        keywordMappings.put("debugout", DEBUGOUT);
-        keywordMappings.put("divE", DIV_E);
-        keywordMappings.put("divF", DIV_F);
-        keywordMappings.put("divT", DIV_T);
-        keywordMappings.put("do", DO);
-        keywordMappings.put("else", ELSE);
-        keywordMappings.put("endfun", ENDFUN);
-        keywordMappings.put("endif", ENDIF);
-        keywordMappings.put("endproc", ENDPROC);
-        keywordMappings.put("endprogram", ENDPROGRAM);
-        keywordMappings.put("endwhile", ENDWHILE);
-        keywordMappings.put("false", FALSE);
-        keywordMappings.put("fun", FUN);
-        keywordMappings.put("global", GLOBAL);
-        keywordMappings.put("if", IF);
-        keywordMappings.put("in", IN);
-        keywordMappings.put("init", INIT);
-        keywordMappings.put("inout", INOUT);
-        keywordMappings.put("int1024", INT_1024);
-        keywordMappings.put("int32", INT_32);
-        keywordMappings.put("int64", INT_64);
-        keywordMappings.put("local", LOCAL);
-        keywordMappings.put("modE", MOD_E);
-        keywordMappings.put("modF", MOD_F);
-        keywordMappings.put("modT", MOD_T);
-        keywordMappings.put("not", NOT);
-        keywordMappings.put("out", OUT);
-        keywordMappings.put("proc", PROC);
-        keywordMappings.put("program", PROGRAM);
-        keywordMappings.put("ref", REF);
-        keywordMappings.put("returns", RETURNS);
-        keywordMappings.put("skip", SKIP);
-        keywordMappings.put("then", THEN);
-        keywordMappings.put("true", TRUE);
-        keywordMappings.put("var", VAR);
-        keywordMappings.put("while", WHILE);
+        keywordMappings.put("bool", new Type(Type.Attr.BOOL));
+        keywordMappings.put("call", new Token(CALL));
+        keywordMappings.put("const", new Changemode(Changemode.Attr.CONST));
+        keywordMappings.put("copy", new Mechmode(Mechmode.Attr.COPY));
+        keywordMappings.put("debugin", new Token(DEBUGIN));
+        keywordMappings.put("debugout", new Token(DEBUGOUT));
+        keywordMappings.put("divE", new MultOpr(MultOpr.Attr.DIV_E));
+        keywordMappings.put("divF", new MultOpr(MultOpr.Attr.DIV_F));
+        keywordMappings.put("divT", new MultOpr(MultOpr.Attr.DIV_T));
+        keywordMappings.put("do", new Token(DO));
+        keywordMappings.put("else", new Token(ELSE));
+        keywordMappings.put("endfun", new Token(ENDFUN));
+        keywordMappings.put("endif", new Token(ENDIF));
+        keywordMappings.put("endproc", new Token(ENDPROC));
+        keywordMappings.put("endprogram", new Token(ENDPROGRAM));
+        keywordMappings.put("endwhile", new Token(ENDWHILE));
+        keywordMappings.put("false", new Literal(false));
+        keywordMappings.put("fun", new Token(FUN));
+        keywordMappings.put("global", new Token(GLOBAL));
+        keywordMappings.put("if", new Token(IF));
+        keywordMappings.put("in", new Flowmode(Flowmode.Attr.IN));
+        keywordMappings.put("init", new Token(INIT));
+        keywordMappings.put("inout", new Flowmode(Flowmode.Attr.INOUT));
+        keywordMappings.put("int1024", new Type(Type.Attr.INT1024));
+        keywordMappings.put("int32", new Type(Type.Attr.INT32));
+        keywordMappings.put("int64", new Type(Type.Attr.INT64));
+        keywordMappings.put("local", new Token(LOCAL));
+        keywordMappings.put("modE", new MultOpr(MultOpr.Attr.MOD_E));
+        keywordMappings.put("modF", new MultOpr(MultOpr.Attr.MOD_F));
+        keywordMappings.put("modT", new MultOpr(MultOpr.Attr.MOD_T));
+        keywordMappings.put("not", new Token(NOTOPR));
+        keywordMappings.put("out", new Flowmode(Flowmode.Attr.OUT));
+        keywordMappings.put("proc", new Token(PROC));
+        keywordMappings.put("program", new Token(PROGRAM));
+        keywordMappings.put("ref", new Mechmode(Mechmode.Attr.REF));
+        keywordMappings.put("returns", new Token(RETURNS));
+        keywordMappings.put("skip", new Token(SKIP));
+        keywordMappings.put("then", new Token(THEN));
+        keywordMappings.put("true", new Literal(true));
+        keywordMappings.put("var", new Changemode(Changemode.Attr.VAR));
+        keywordMappings.put("while", new Token(WHILE));
     }
 
-    public static Optional<Terminal> identifierToKeyword(String identifier) {
+    public static Optional<Token> identifierToKeyword(String identifier) {
         return Optional.ofNullable(keywordMappings.get(identifier));
     }
 }
