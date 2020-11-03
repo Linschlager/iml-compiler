@@ -48,8 +48,7 @@ TODO (neues keyword record und neues symbol "."🤔)
 ## Grammatikalische Erweiterungen zu IML
 ### Deklarationen
 ```
-<typedIdents> ::= <typedIdent> [',' <typedIdents>]
-<recordShapeDecl> ::= record <ident> '(' <typedIdents> ')'
+<recordShapeDecl> ::= record <ident> '(' <typedIdent> { ',' <typedIdent> } ')'
 
 <type> ::= bool
          | <inttype>
@@ -63,19 +62,11 @@ TODO (neues keyword record und neues symbol "."🤔)
 ### Init and Usage
 ```
 <factor> ::= <literal>
-           | <ident> [init | <exprList>]
+           | <ident> [init | <exprList> | <recordAccess> ]  // <-
            | <monopr> <factor>
-           | <recordExpr> // <-
            | '(' <expr> ')'
 
-<recordExpr> ::= <ident> {'.' <recordExpr>}
-<recordConstructDecl> ::= <ident> <exprList> // recordName(whatever,how,many,elements)
-<cmd> ::= skip
-        | <expr> := (<expr> | <recordConstructDecl>) // <-
-        | if <expr> then <cpsCmd>
-         [else <cpsCmd>] endif
-        | while <expr> do <cpsCmd> endwhile
-        | call <ident> <exprList> [<globInits>]
-        | debugin <expr>
-        | debugout <expr>
+<recordAccess> ::= '.' <ident> [<recordAccess>]
+
+// record initialisation has same grammar as function call
 ```
