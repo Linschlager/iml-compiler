@@ -38,6 +38,8 @@ public class Scanner {
                         tokenList.add(new AddOpr(AddOpr.Attr.MINUS));
                     } else if (c == '*') {
                         tokenList.add(new MultOpr(MultOpr.Attr.TIMES));
+                    } else if (c == '.') {
+                        tokenList.add(new Token(Terminal.ACCESSOPR));
                     } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
                         lexAccu = new StringBuilder();
                         lexAccu.append(c);

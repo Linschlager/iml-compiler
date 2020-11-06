@@ -85,6 +85,7 @@ public enum Terminal {
         keywordMappings.put("out", new Flowmode(Flowmode.Attr.OUT));
         keywordMappings.put("proc", new Token(PROC));
         keywordMappings.put("program", new Token(PROGRAM));
+        keywordMappings.put("record", new Token(RECORD));
         keywordMappings.put("ref", new Mechmode(Mechmode.Attr.REF));
         keywordMappings.put("returns", new Token(RETURNS));
         keywordMappings.put("skip", new Token(SKIP));

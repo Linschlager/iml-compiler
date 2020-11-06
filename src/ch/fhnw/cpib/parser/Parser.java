@@ -948,10 +948,6 @@ public class Parser implements ParserInterface {
         /*
           terminal MULTOPR
             MULTOPR <factor> <repMultOprFactor>
-          terminal RELOPR
-
-          terminal ADDOPR
-
           terminal COMMA
 
           terminal RPAREN
@@ -978,14 +974,16 @@ public class Parser implements ParserInterface {
 
           terminal BOOLOPR
 
+          terminal RELOPR
+
+          terminal ADDOPR
+
          */
         if (token.terminal == Terminal.MULTOPR) {
             consume(Terminal.MULTOPR);
             factor();
             repMultOprFactor();
-        } else if (List.of(Terminal.RELOPR,
-                Terminal.ADDOPR,
-                Terminal.COMMA,
+        } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
                 Terminal.THEN,
@@ -997,7 +995,9 @@ public class Parser implements ParserInterface {
                 Terminal.ENDPROGRAM,
                 Terminal.SEMICOLON,
                 Terminal.BECOMES,
-                Terminal.BOOLOPR).contains(token.terminal)) {
+                Terminal.BOOLOPR,
+                Terminal.RELOPR,
+                Terminal.ADDOPR).contains(token.terminal)) {
             // epsilon
         } else throw new GrammarError("repMultOprFactor");
     }
@@ -1038,10 +1038,6 @@ public class Parser implements ParserInterface {
             <exprList>
           terminal ACCESSOPR
             <recordAccess>
-          terminal RELOPR
-
-          terminal ADDOPR
-
           terminal COMMA
 
           terminal RPAREN
@@ -1070,6 +1066,10 @@ public class Parser implements ParserInterface {
 
           terminal MULTOPR
 
+          terminal RELOPR
+
+          terminal ADDOPR
+
          */
         if (token.terminal == Terminal.INIT) {
             consume(Terminal.INIT);
@@ -1077,9 +1077,7 @@ public class Parser implements ParserInterface {
             exprList();
         } else if (token.terminal == Terminal.ACCESSOPR) {
             recordAccess();
-        } else if (List.of(Terminal.RELOPR,
-                Terminal.ADDOPR,
-                Terminal.COMMA,
+        } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
                 Terminal.THEN,
@@ -1092,7 +1090,9 @@ public class Parser implements ParserInterface {
                 Terminal.SEMICOLON,
                 Terminal.BECOMES,
                 Terminal.BOOLOPR,
-                Terminal.MULTOPR).contains(token.terminal)) {
+                Terminal.MULTOPR,
+                Terminal.RELOPR,
+                Terminal.ADDOPR).contains(token.terminal)) {
             // epsilon
         } else throw new GrammarError("optInitOrExprListOrRecordAccess");
     }
@@ -1113,10 +1113,6 @@ public class Parser implements ParserInterface {
         /*
           terminal ACCESSOPR
             ACCESSOPR IDENT <optRecordAccess>
-          terminal RELOPR
-
-          terminal ADDOPR
-
           terminal COMMA
 
           terminal RPAREN
@@ -1143,6 +1139,10 @@ public class Parser implements ParserInterface {
 
           terminal BOOLOPR
 
+          terminal RELOPR
+
+          terminal ADDOPR
+
           terminal MULTOPR
 
          */
@@ -1150,9 +1150,7 @@ public class Parser implements ParserInterface {
             consume(Terminal.ACCESSOPR);
             consume(Terminal.IDENT);
             optRecordAccess();
-        } else if (List.of(Terminal.RELOPR,
-                Terminal.ADDOPR,
-                Terminal.COMMA,
+        } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
                 Terminal.THEN,
@@ -1165,6 +1163,8 @@ public class Parser implements ParserInterface {
                 Terminal.SEMICOLON,
                 Terminal.BECOMES,
                 Terminal.BOOLOPR,
+                Terminal.RELOPR,
+                Terminal.ADDOPR,
                 Terminal.MULTOPR).contains(token.terminal)) {
             // epsilon
         } else throw new GrammarError("optRecordAccess");
@@ -1187,7 +1187,7 @@ public class Parser implements ParserInterface {
     private void repBoolOprTerm1() throws GrammarError {
         /*
           terminal BOOLOPR
-            BOOLOPR <term3> <repBoolOprTerm1>
+            BOOLOPR <term1> <repBoolOprTerm1>
           terminal COMMA
 
           terminal RPAREN
@@ -1215,7 +1215,7 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.BOOLOPR) {
             consume(Terminal.BOOLOPR);
-            term3();
+            term1();
             repBoolOprTerm1();
         } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
