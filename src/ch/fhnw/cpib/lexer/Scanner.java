@@ -1,17 +1,22 @@
-package ch.fhnw.cpib;
+package ch.fhnw.cpib.lexer;
 
 import ch.fhnw.cpib.exceptions.LexicalError;
-import ch.fhnw.cpib.tokens.*;
+import ch.fhnw.cpib.lexer.tokens.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Scanner {
+public class Scanner implements IScanner {
 
-    public static List<Token> scan(CharSequence input) throws LexicalError {
+    private final CharSequence input;
+
+    public Scanner(CharSequence input) {
+        this.input = input;
+    }
+
+    public ITokenList scan() throws LexicalError {
         assert(input.length() == 0 || input.charAt(input.length()-1) == '\n');
-        List<Token> tokenList = new ArrayList<>();
-
+        ITokenList tokenList = new TokenList();
 
         int state = 0;
         StringBuilder lexAccu = null; // for identifiers and comments

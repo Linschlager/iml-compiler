@@ -1,18 +1,18 @@
 package ch.fhnw.cpib.parser;
 
 import ch.fhnw.cpib.exceptions.GrammarError;
-import ch.fhnw.cpib.tokens.Terminal;
-import ch.fhnw.cpib.tokens.Token;
+import ch.fhnw.cpib.lexer.ITokenList;
+import ch.fhnw.cpib.lexer.tokens.*;
 
 import java.util.Iterator;
 import java.util.List;
 
-public class Parser implements ParserInterface {
+public class Parser implements IParser {
 
     private final Iterator<Token> iterator;
     private Token token;
 
-    public Parser(List<Token> tokens) {
+    public Parser(ITokenList tokens) {
         iterator = tokens.iterator();
         token = iterator.next();
     }
@@ -31,28 +31,30 @@ public class Parser implements ParserInterface {
     }
 
     @Override
-    public void parse() throws GrammarError {
+    public ConcSyn.IProgram parse() throws GrammarError {
         // parsing the start symbol ...
-        /*ConcSyn.IProgram program = */program();
+        ConcSyn.IProgram program = program();
         // ... and then consuming the SENTINEL
         consume(Terminal.SENTINEL);
-        //return program;
+        return program;
     }
 
-    public void program() throws GrammarError {
+    public ConcSyn.IProgram program() throws GrammarError {
         if (token.terminal == Terminal.PROGRAM) {
             // PROGRAM IDENT <progParamList> <optGlobalCpsDecl> DO <cpsCmd> ENDPROGRAM
+            ConcSyn.Program program = new ConcSyn.Program();
             consume(Terminal.PROGRAM);
             consume(Terminal.IDENT);
-            progParamList();
-            optGlobalCpsDecl();
+            program.progParamList = progParamList();
+            program.optGlobalCpsDecl = optGlobalCpsDecl();
             consume(Terminal.DO);
-            cpsCmd();
+            program.cpsCmd = cpsCmd();
             consume(Terminal.ENDPROGRAM);
+            return program;
         } else throw new GrammarError("program");
     }
 
-    private void optGlobalCpsDecl() throws GrammarError {
+    private ConcSyn.IOptGlobalCpsDecl optGlobalCpsDecl() throws GrammarError {
         /*
           terminal GLOBAL
             GLOBAL <cpsDecl>
@@ -60,14 +62,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.GLOBAL) {
+            ConcSyn.OptGlobalCpsDecl optGlobalCpsDecl = new ConcSyn.OptGlobalCpsDecl();
             consume(Terminal.GLOBAL);
-            cpsDecl();
+            optGlobalCpsDecl.cpsDecl = cpsDecl();
+            return optGlobalCpsDecl;
         } else if (token.terminal == Terminal.DO) {
             // epsilon
+            return new ConcSyn.OptGlobalCpsDeclEpsilon();
         } else throw new GrammarError("optGlobalCpsDecl");
     }
 
-    private void cpsDecl() throws GrammarError {
+    private ConcSyn.ICpsDecl cpsDecl() throws GrammarError {
         /*
           terminal RECORD
             <decl> <repSemicolonDecl>
@@ -80,13 +85,15 @@ public class Parser implements ParserInterface {
           terminal CHANGEMODE
             <decl> <repSemicolonDecl>
          */
-        if (List.of(Terminal.RECORD,Terminal.PROC,Terminal.FUN,Terminal.IDENT,Terminal.CHANGEMODE).contains(token.terminal)) {
-            decl();
-            repSemicolonDecl();
+        if (List.of(Terminal.RECORD, Terminal.PROC, Terminal.FUN, Terminal.IDENT, Terminal.CHANGEMODE).contains(token.terminal)) {
+            ConcSyn.CpsDecl cpsDecl = new ConcSyn.CpsDecl();
+            cpsDecl.decl = decl();
+            cpsDecl.cpsDecl = repSemicolonDecl();
+            return cpsDecl;
         } else throw new GrammarError("cpsDecl");
     }
 
-    private void repSemicolonDecl() throws GrammarError {
+    private ConcSyn.ICpsDecl repSemicolonDecl() throws GrammarError {
         /*
           terminal SEMICOLON
             SEMICOLON <decl> <repSemicolonDecl>
@@ -95,14 +102,14 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.SEMICOLON) {
             consume(Terminal.SEMICOLON);
-            decl();
-            repSemicolonDecl();
+            return cpsDecl();
         } else if (token.terminal == Terminal.DO) {
             // epsilon
+            return new ConcSyn.CpsDeclEpsilon();
         } else throw new GrammarError("repSemicolonDecl");
     }
 
-    private void decl() throws GrammarError {
+    private ConcSyn.IDecl decl() throws GrammarError {
         /*
           terminal IDENT
             <stoDecl>
@@ -116,32 +123,42 @@ public class Parser implements ParserInterface {
             <recordShapeDecl>
          */
         if (token.terminal == Terminal.IDENT || token.terminal == Terminal.CHANGEMODE) {
-            stoDecl();
+            return stoDecl();
         } else if (token.terminal == Terminal.FUN) {
-            funDecl();
+            return funDecl();
         } else if (token.terminal == Terminal.PROC) {
-            procDecl();
+            return procDecl();
         } else if (token.terminal == Terminal.RECORD) {
-            recordShapeDecl();
+            return recordShapeDecl();
         } else throw new GrammarError("decl");
     }
 
-    private void recordShapeDecl() throws GrammarError {
+    private ConcSyn.ICpsTypedIdent cpsTypedIdent() throws GrammarError {
+        if (token.terminal == Terminal.IDENT) {
+            ConcSyn.CpsTypedIdent cpsTypedIdent = new ConcSyn.CpsTypedIdent();
+            cpsTypedIdent.typedIdent = typedIdent();
+            cpsTypedIdent.cpsTypedIdent = repCommaTypedIdent();
+            return cpsTypedIdent;
+        } else throw new GrammarError("cpsTypedIdent");
+    }
+
+    private ConcSyn.IRecordShapeDecl recordShapeDecl() throws GrammarError {
         /*
           terminal RECORD
             RECORD IDENT LPAREN <typedIdent> <repCommaTypedIdent> RPAREN
          */
         if (token.terminal == Terminal.RECORD) {
+            ConcSyn.RecordShapeDecl recordShapeDecl = new ConcSyn.RecordShapeDecl();
             consume(Terminal.RECORD);
-            consume(Terminal.IDENT);
+            recordShapeDecl.name = (Identifier) consume(Terminal.IDENT);
             consume(Terminal.LPAREN);
-            typedIdent();
-            repCommaTypedIdent();
+            recordShapeDecl.cpsTypedIdent = cpsTypedIdent();
             consume(Terminal.RPAREN);
+            return recordShapeDecl;
         } else throw new GrammarError("recordShapeDecl");
     }
 
-    private void repCommaTypedIdent() throws GrammarError {
+    private ConcSyn.ICpsTypedIdent repCommaTypedIdent() throws GrammarError {
         /*
           terminal COMMA
             COMMA <typedIdent> <repCommaTypedIdent>
@@ -149,27 +166,31 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.COMMA) {
+            ConcSyn.CpsTypedIdent cpsTypedIdent = new ConcSyn.CpsTypedIdent();
             consume(Terminal.COMMA);
-            typedIdent();
-            repCommaTypedIdent();
+            cpsTypedIdent.typedIdent = typedIdent();
+            cpsTypedIdent.cpsTypedIdent = repCommaTypedIdent();
+            return cpsTypedIdent;
         } else if (token.terminal == Terminal.RPAREN) {
-            // epsilon
+            return new ConcSyn.CpsTypedIdentEpsilon();
         } else throw new GrammarError("recordShapeDecl");
     }
 
-    private void typedIdent() throws GrammarError {
+    private ConcSyn.ITypedIdent typedIdent() throws GrammarError {
         /*
           terminal IDENT
             IDENT COLON <typeOrRecord>
          */
         if (token.terminal == Terminal.IDENT) {
-            consume(Terminal.IDENT);
+            ConcSyn.TypedIdent typedIdent = new ConcSyn.TypedIdent();
+            typedIdent.identifier = (Identifier) consume(Terminal.IDENT);
             consume(Terminal.COLON);
-            typeOrRecord();
+            typedIdent.type = typeOrRecord();
+            return typedIdent;
         } else throw new GrammarError("typedIdent");
     }
 
-    private void typeOrRecord() throws GrammarError {
+    private ConcSyn.IType typeOrRecord() throws GrammarError {
         /*
         <typeOrRecord>
           terminal TYPE
@@ -178,42 +199,50 @@ public class Parser implements ParserInterface {
             IDENT
          */
         if (token.terminal == Terminal.TYPE) {
-            consume(Terminal.TYPE);
+            ConcSyn.TraditionalType type = new ConcSyn.TraditionalType();
+            type.type = (Type) consume(Terminal.TYPE);
+            return type;
         } else if (token.terminal == Terminal.IDENT) {
-            consume(Terminal.IDENT);
+            ConcSyn.RecordType type = new ConcSyn.RecordType();
+            type.name = (Identifier) consume(Terminal.IDENT);
+            return type;
         } else throw new GrammarError("typeOrRecord");
     }
 
-    private void procDecl() throws GrammarError {
+    private ConcSyn.IProcDecl procDecl() throws GrammarError {
         /*
           terminal PROC
             PROC IDENT <paramList> <optGlobalGlobImps> <optLocalCpsStoDecl> DO <cpsCmd> ENDPROC
          */
         if (token.terminal == Terminal.PROC) {
+            ConcSyn.ProcDecl procDecl = new ConcSyn.ProcDecl();
             consume(Terminal.PROC);
-            consume(Terminal.IDENT);
-            paramList();
-            optGlobalGlobImps();
-            optLocalCpsStoDecl();
+            procDecl.name = (Identifier) consume(Terminal.IDENT);
+            procDecl.paramList = paramList();
+            procDecl.optGlobalGlobImps = optGlobalGlobImps();
+            procDecl.optLocalCpsStoDecl = optLocalCpsStoDecl();
             consume(Terminal.DO);
-            cpsCmd();
+            procDecl.cpsCmd = cpsCmd();
             consume(Terminal.ENDPROC);
+            return procDecl;
         } else throw new GrammarError("procDecl");
     }
 
-    private void paramList() throws GrammarError {
+    private ConcSyn.IParamList paramList() throws GrammarError {
         /*
           terminal LPAREN
             LPAREN <optParamRepCommaParam> RPAREN
          */
         if (token.terminal == Terminal.LPAREN) {
+            ConcSyn.ParamList paramList = new ConcSyn.ParamList();
             consume(Terminal.LPAREN);
-            optParamRepCommaParam();
+            paramList.optParamRepCommaParam = optParamRepCommaParam();
             consume(Terminal.RPAREN);
+            return paramList;
         } else throw new GrammarError("paramList");
     }
 
-    private void optParamRepCommaParam() throws GrammarError {
+    private ConcSyn.IOptParamRepCommaParam optParamRepCommaParam() throws GrammarError {
         /*
           terminal IDENT
             <param> <repCommaParam>
@@ -226,31 +255,37 @@ public class Parser implements ParserInterface {
           terminal RPAREN
 
          */
-        if (List.of(Terminal.IDENT,Terminal.CHANGEMODE,Terminal.MECHMODE,Terminal.FLOWMODE).contains(token.terminal)) {
-            param();
-            repCommaParam();
-        } else if(token.terminal == Terminal.RPAREN) {
+        if (List.of(Terminal.IDENT, Terminal.CHANGEMODE, Terminal.MECHMODE, Terminal.FLOWMODE).contains(token.terminal)) {
+            ConcSyn.OptParamRepCommaParam optParamRepCommaParam = new ConcSyn.OptParamRepCommaParam();
+            optParamRepCommaParam.param = param();
+            optParamRepCommaParam.optParamRepCommaParam = repCommaParam();
+            return optParamRepCommaParam;
+        } else if (token.terminal == Terminal.RPAREN) {
             // epsilon
+            return new ConcSyn.OptParamRepCommaParamEpsilon();
         } else throw new GrammarError("optParamRepCommaParam");
     }
 
-    private void repCommaParam() throws GrammarError {
+    private ConcSyn.IOptParamRepCommaParam repCommaParam() throws GrammarError {
         /*
           terminal COMMA
             COMMA <param> <repCommaParam>
           terminal RPAREN
 
          */
-        if(token.terminal == Terminal.COMMA) {
+        if (token.terminal == Terminal.COMMA) {
+            ConcSyn.OptParamRepCommaParam optParamRepCommaParam = new ConcSyn.OptParamRepCommaParam();
             consume(Terminal.COMMA);
-            param();
-            repCommaParam();
+            optParamRepCommaParam.param = param();
+            optParamRepCommaParam.optParamRepCommaParam = repCommaParam();
+            return optParamRepCommaParam;
         } else if (token.terminal == Terminal.RPAREN) {
             // epsilon
+            return new ConcSyn.OptParamRepCommaParamEpsilon();
         } else throw new GrammarError("repCommaParam");
     }
 
-    private void param() throws GrammarError {
+    private ConcSyn.IParam param() throws GrammarError {
         /*
           terminal IDENT
             <optFlowmode> <optMechmode> <optChangemode> <typedIdent>
@@ -261,17 +296,19 @@ public class Parser implements ParserInterface {
           terminal FLOWMODE
             <optFlowmode> <optMechmode> <optChangemode> <typedIdent>
          */
-        if (List.of(Terminal.IDENT,Terminal.CHANGEMODE,Terminal.MECHMODE,Terminal.FLOWMODE).contains(token.terminal)) {
-            optFlowmode();
-            optMechmode();
-            optChangemode();
-            typedIdent();
-        } else if(token.terminal == Terminal.RPAREN) {
-            // epsilon
+        if (List.of(Terminal.IDENT, Terminal.CHANGEMODE, Terminal.MECHMODE, Terminal.FLOWMODE).contains(token.terminal)) {
+            ConcSyn.Param param = new ConcSyn.Param();
+            param.optFlowmode = optFlowmode();
+            param.optMechmode = optMechmode();
+            param.optChangemode = optChangemode();
+            param.typedIdent = typedIdent();
+            return param;
+        } else if (token.terminal == Terminal.RPAREN) {
+            return new ConcSyn.ParamEpsilon();
         } else throw new GrammarError("param");
     }
 
-    private void optChangemode() throws GrammarError {
+    private ConcSyn.IOptChangemode optChangemode() throws GrammarError {
         /*
           terminal CHANGEMODE
             CHANGEMODE
@@ -279,13 +316,15 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.CHANGEMODE) {
-            consume(Terminal.CHANGEMODE);
-        } else if(token.terminal == Terminal.IDENT) {
-            // epsilon
+            ConcSyn.OptChangemode changemode = new ConcSyn.OptChangemode();
+            changemode.changemode = (Changemode) consume(Terminal.CHANGEMODE);
+            return changemode;
+        } else if (token.terminal == Terminal.IDENT) {
+            return new ConcSyn.OptChangemodeEpsilon();
         } else throw new GrammarError("optChangemode");
     }
 
-    private void optMechmode() throws GrammarError {
+    private ConcSyn.IOptMechmode optMechmode() throws GrammarError {
         /*
           terminal MECHMODE
             MECHMODE
@@ -295,13 +334,15 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.MECHMODE) {
-            consume(Terminal.MECHMODE);
-        } else if(List.of(Terminal.IDENT,Terminal.CHANGEMODE).contains(token.terminal)) {
-            // epsilon
+            ConcSyn.OptMechmode mechmode = new ConcSyn.OptMechmode();
+            mechmode.mechmode = (Mechmode) consume(Terminal.MECHMODE);
+            return mechmode;
+        } else if (List.of(Terminal.IDENT, Terminal.CHANGEMODE).contains(token.terminal)) {
+            return new ConcSyn.OptMechmodeEpsilon();
         } else throw new GrammarError("optMechmode");
     }
 
-    private void optFlowmode() throws GrammarError {
+    private ConcSyn.IOptFlowmode optFlowmode() throws GrammarError {
         /*
           terminal FLOWMODE
             FLOWMODE
@@ -313,32 +354,38 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.FLOWMODE) {
-            consume(Terminal.FLOWMODE);
-        } else if(List.of(Terminal.MECHMODE,Terminal.IDENT,Terminal.CHANGEMODE).contains(token.terminal)) {
+            ConcSyn.OptFlowmode flowmode = new ConcSyn.OptFlowmode();
+            flowmode.flowmode = (Flowmode) consume(Terminal.FLOWMODE);
+            return flowmode;
+        } else if (List.of(Terminal.MECHMODE, Terminal.IDENT, Terminal.CHANGEMODE).contains(token.terminal)) {
             // epsilon
+            return new ConcSyn.OptFlowmodeEpsilon();
         } else throw new GrammarError("optFlowmode");
     }
 
-    private void funDecl() throws GrammarError {
+    private ConcSyn.FunDecl funDecl() throws GrammarError {
         /*
           terminal FUN
             FUN IDENT <paramList> RETURNS <stoDecl> <optGlobalGlobImps> <optLocalCpsStoDecl> DO <cpsCmd> ENDFUN
          */
         if (token.terminal == Terminal.FUN) {
+            ConcSyn.FunDecl funDecl = new ConcSyn.FunDecl();
             consume(Terminal.FUN);
-            consume(Terminal.IDENT);
-            paramList();
+            funDecl.name = (Identifier) consume(Terminal.IDENT);
+            funDecl.paramList = paramList();
             consume(Terminal.RETURNS);
-            stoDecl();
-            optGlobalGlobImps();
-            optLocalCpsStoDecl();
+            funDecl.stoDecl = stoDecl();
+            funDecl.optGlobalGlobImps = optGlobalGlobImps();
+            funDecl.optLocalCpsStoDecl = optLocalCpsStoDecl();
             consume(Terminal.DO);
-            cpsCmd();
+            funDecl.cpsCmd = cpsCmd();
             consume(Terminal.ENDFUN);
+            return funDecl;
+
         } else throw new GrammarError("funDecl");
     }
 
-    private void cpsCmd() throws GrammarError {
+    private ConcSyn.ICpsCmd cpsCmd() throws GrammarError {
         /*
           terminal DEBUGOUT
             <cmd> <repSemicolonCmd>
@@ -365,15 +412,17 @@ public class Parser implements ParserInterface {
          */
         if (
                 List.of(Terminal.DEBUGOUT, Terminal.DEBUGIN, Terminal.CALL, Terminal.WHILE, Terminal.IF, Terminal.LPAREN,
-                    Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL, Terminal.SKIP)
+                        Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL, Terminal.SKIP)
                         .contains(token.terminal)
         ) {
-            cmd();
-            repSemicolonCmd();
+            ConcSyn.CpsCmd cpsCmd = new ConcSyn.CpsCmd();
+            cpsCmd.cmd = cmd();
+            cpsCmd.cpsCmd = repSemicolonCmd();
+            return cpsCmd;
         } else throw new GrammarError("cpsCmd");
     }
 
-    private void repSemicolonCmd() throws GrammarError {
+    private ConcSyn.ICpsCmd repSemicolonCmd() throws GrammarError {
         /*
           terminal SEMICOLON
             SEMICOLON <cmd> <repSemicolonCmd>
@@ -392,14 +441,13 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.SEMICOLON) {
             consume(Terminal.SEMICOLON);
-            cmd();
-            repSemicolonCmd();
-        } else if(List.of(Terminal.ENDWHILE,Terminal.ENDIF,Terminal.ENDPROC,Terminal.ENDFUN,Terminal.ENDPROGRAM).contains(token.terminal)) {
-            // epsilon
+            return cpsCmd();
+        } else if (List.of(Terminal.ENDWHILE, Terminal.ENDIF, Terminal.ENDPROC, Terminal.ENDFUN, Terminal.ENDPROGRAM).contains(token.terminal)) {
+            return new ConcSyn.CpsCmdEpsilon();
         } else throw new GrammarError("repSemicolonCmd");
     }
 
-    private void cmd() throws GrammarError {
+    private ConcSyn.ICmd cmd() throws GrammarError {
         /*
           terminal SKIP
             SKIP
@@ -426,50 +474,65 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.SKIP) {
             consume(Terminal.SKIP);
+            return new ConcSyn.SkipCmd();
         } else if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
-            expr();
+            ConcSyn.AssignmentCmd assignmentCmd = new ConcSyn.AssignmentCmd();
+            assignmentCmd.expr1 = expr();
             consume(Terminal.BECOMES);
-            expr();
+            assignmentCmd.expr2 = expr();
+            return assignmentCmd;
         } else if (token.terminal == Terminal.IF) {
+            ConcSyn.IfCmd ifCmd = new ConcSyn.IfCmd();
             consume(Terminal.IF);
-            expr();
+            ifCmd.conditionExpr = expr();
             consume(Terminal.THEN);
-            cpsCmd();
-            optElseCpsCmd();
+            ifCmd.cpsCmd = cpsCmd();
+            ifCmd.optElseCpsCmd = optElseCpsCmd();
             consume(Terminal.ENDIF);
+            return ifCmd;
         } else if (token.terminal == Terminal.WHILE) {
+            ConcSyn.WhileCmd whileCmd = new ConcSyn.WhileCmd();
             consume(Terminal.WHILE);
-            expr();
+            whileCmd.conditionExpr = expr();
             consume(Terminal.DO);
-            cpsCmd();
+            whileCmd.cpsCmd = cpsCmd();
             consume(Terminal.ENDWHILE);
+            return whileCmd;
         } else if (token.terminal == Terminal.CALL) {
+            ConcSyn.CallCmd callCmd = new ConcSyn.CallCmd();
             consume(Terminal.CALL);
-            consume(Terminal.IDENT);
-            exprList();
-            optGlobInits();
+            callCmd.identifier = (Identifier) consume(Terminal.IDENT);
+            callCmd.exprList = exprList();
+            callCmd.optGlobInits = optGlobInits();
+            return callCmd;
         } else if (token.terminal == Terminal.DEBUGIN) {
+            ConcSyn.DebugInCmd debugInCmd = new ConcSyn.DebugInCmd();
             consume(Terminal.DEBUGIN);
-            expr();
+            debugInCmd.expr = expr();
+            return debugInCmd;
         } else if (token.terminal == Terminal.DEBUGOUT) {
+            ConcSyn.DebugOutCmd debugOutCmd = new ConcSyn.DebugOutCmd();
             consume(Terminal.DEBUGOUT);
-            expr();
+            debugOutCmd.expr = expr();
+            return debugOutCmd;
         } else throw new GrammarError("cmd");
     }
 
-    private void exprList() throws GrammarError {
+    private ConcSyn.IExprList exprList() throws GrammarError {
         /*
           terminal LPAREN
             LPAREN <optExprRepCommaExpr> RPAREN
          */
         if (token.terminal == Terminal.LPAREN) {
+            ConcSyn.ExprList exprList = new ConcSyn.ExprList();
             consume(Terminal.LPAREN);
-            optExprRepCommaExpr();
+            exprList.optExprRepCommaExpr = optExprRepCommaExpr();
             consume(Terminal.RPAREN);
+            return exprList;
         } else throw new GrammarError("exprList");
     }
 
-    private void optExprRepCommaExpr() throws GrammarError {
+    private ConcSyn.IOptExprRepCommaExpr optExprRepCommaExpr() throws GrammarError {
         /*
           terminal LPAREN
             <expr> <repCommaExpr>
@@ -484,15 +547,17 @@ public class Parser implements ParserInterface {
           terminal RPAREN
 
          */
-        if (List.of(Terminal.LPAREN,Terminal.ADDOPR,Terminal.NOTOPR,Terminal.IDENT,Terminal.LITERAL).contains(token.terminal)) {
-            expr();
-            repCommaExpr();
-        } else if(token.terminal == Terminal.RPAREN) {
-            // epsilon
+        if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
+            ConcSyn.OptExprRepCommaExpr optExprRepCommaExpr = new ConcSyn.OptExprRepCommaExpr();
+            optExprRepCommaExpr.expression = expr();
+            optExprRepCommaExpr.optExprRepCommaExpr = repCommaExpr();
+            return optExprRepCommaExpr;
+        } else if (token.terminal == Terminal.RPAREN) {
+            return new ConcSyn.OptExprRepCommaExprEpsilon();
         } else throw new GrammarError("optExprRepCommaExpr");
     }
 
-    private void repCommaExpr() throws GrammarError {
+    private ConcSyn.IOptExprRepCommaExpr repCommaExpr() throws GrammarError {
         /*
           terminal COMMA
             COMMA <expr> <repCommaExpr>
@@ -501,14 +566,13 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.COMMA) {
             consume(Terminal.COMMA);
-            expr();
-            repCommaExpr();
-        } else if(token.terminal == Terminal.RPAREN) {
-            // epsilon
+            return optExprRepCommaExpr();
+        } else if (token.terminal == Terminal.RPAREN) {
+            return new ConcSyn.OptExprRepCommaExprEpsilon();
         } else throw new GrammarError("optExprRepCommaExpr");
     }
 
-    private void optGlobInits() throws GrammarError {
+    private ConcSyn.IOptGlobInits optGlobInits() throws GrammarError {
         /*
           terminal INIT
             INIT IDENT <repCommaIdent>
@@ -528,43 +592,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.INIT) {
+            ConcSyn.OptGlobInits optGlobInits = new ConcSyn.OptGlobInits();
             consume(Terminal.INIT);
-            consume(Terminal.IDENT);
-            repCommaIdent();
-        } else if(List.of(Terminal.ENDWHILE,Terminal.ENDIF,Terminal.ELSE,Terminal.ENDPROC,Terminal.ENDFUN,Terminal.ENDPROGRAM,Terminal.SEMICOLON).contains(token.terminal)) {
-            // epsilon
+            optGlobInits.identifier = (Identifier) consume(Terminal.IDENT);
+            optGlobInits.optGlobInits = optGlobInits;
+            return optGlobInits;
+        } else if (List.of(Terminal.ENDWHILE, Terminal.ENDIF, Terminal.ELSE, Terminal.ENDPROC, Terminal.ENDFUN, Terminal.ENDPROGRAM, Terminal.SEMICOLON).contains(token.terminal)) {
+            return new ConcSyn.OptGlobInitsEpsilon();
         } else throw new GrammarError("optGlobInits");
     }
 
-    private void repCommaIdent() throws GrammarError {
-        /*
-          terminal COMMA
-            COMMA IDENT <repCommaIdent>
-          terminal ENDWHILE
-
-          terminal ENDIF
-
-          terminal ELSE
-
-          terminal ENDPROC
-
-          terminal ENDFUN
-
-          terminal ENDPROGRAM
-
-          terminal SEMICOLON
-
-         */
-        if (token.terminal == Terminal.COMMA) {
-            consume(Terminal.COMMA);
-            consume(Terminal.IDENT);
-            repCommaIdent();
-        } else if(List.of(Terminal.ENDWHILE,Terminal.ENDIF,Terminal.ELSE,Terminal.ENDPROC,Terminal.ENDFUN,Terminal.ENDPROGRAM,Terminal.SEMICOLON).contains(token.terminal)) {
-            // epsilon
-        } else throw new GrammarError("repCommaIdent");
-    }
-
-    private void optElseCpsCmd() throws GrammarError {
+    private ConcSyn.IOptElseCpsCmd optElseCpsCmd() throws GrammarError {
         /*
           terminal ELSE
             ELSE <cpsCmd>
@@ -572,14 +610,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.ELSE) {
+            ConcSyn.OptElseCpsCmd optElseCpsCmd = new ConcSyn.OptElseCpsCmd();
             consume(Terminal.ELSE);
-            cpsCmd();
+            optElseCpsCmd.cpsCmd = cpsCmd();
+            return optElseCpsCmd;
         } else if (token.terminal == Terminal.ENDIF) {
             // epsilon
+            return new ConcSyn.OptElseCpsCmdEpsilon();
         } else throw new GrammarError("optElseCpsCmd");
     }
 
-    private void optLocalCpsStoDecl() throws GrammarError {
+    private ConcSyn.IOptLocalCpsStoDecl optLocalCpsStoDecl() throws GrammarError {
         /*
           terminal LOCAL
             LOCAL <cpsStoDecl>
@@ -587,14 +628,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.LOCAL) {
+            ConcSyn.OptLocalCpsStoDecl optLocalCpsStoDecl = new ConcSyn.OptLocalCpsStoDecl();
             consume(Terminal.LOCAL);
-            cpsStoDecl();
+            optLocalCpsStoDecl.cpsStoDecl = cpsStoDecl();
+            return optLocalCpsStoDecl;
         } else if (token.terminal == Terminal.DO) {
             // epsilon
+            return new ConcSyn.OptLocalCpsStoDeclEpsilon();
         } else throw new GrammarError("optLocalCpsStoDecl");
     }
 
-    private void cpsStoDecl() throws GrammarError {
+    private ConcSyn.ICpsStoDecl cpsStoDecl() throws GrammarError {
         /*
           terminal IDENT
             <stoDecl> <repSemicolonStoDecl>
@@ -602,12 +646,14 @@ public class Parser implements ParserInterface {
             <stoDecl> <repSemicolonStoDecl>
          */
         if (token.terminal == Terminal.IDENT || token.terminal == Terminal.CHANGEMODE) {
-            stoDecl();
-            repSemicolonStoDecl();
+            ConcSyn.CpsStoDecl cpsStoDecl = new ConcSyn.CpsStoDecl();
+            cpsStoDecl.stoDecl = stoDecl();
+            cpsStoDecl.cpsStoDecl = repSemicolonStoDecls();
+            return cpsStoDecl;
         } else throw new GrammarError("cpsStoDecl");
     }
 
-    private void repSemicolonStoDecl() throws GrammarError {
+    private ConcSyn.ICpsStoDecl repSemicolonStoDecls() throws GrammarError {
         /*
           terminal SEMICOLON
             SEMICOLON <stoDecl>
@@ -616,13 +662,14 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.SEMICOLON) {
             consume(Terminal.SEMICOLON);
-            stoDecl();
+            return cpsStoDecl();
         } else if (token.terminal == Terminal.DO) {
             // epsilon
+            return new ConcSyn.CpsStoDeclEpsilon();
         } else throw new GrammarError("repSemicolonStoDecl");
     }
 
-    private void optGlobalGlobImps() throws GrammarError {
+    private ConcSyn.IOptGlobalGlobImps optGlobalGlobImps() throws GrammarError {
         /*
           terminal GLOBAL
             GLOBAL <globImps>
@@ -632,14 +679,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.GLOBAL) {
+            ConcSyn.OptGlobalGlobImps globalGlobImps = new ConcSyn.OptGlobalGlobImps();
             consume(Terminal.GLOBAL);
-            globImps();
+            globalGlobImps.globImps = globImps();
+            return globalGlobImps;
         } else if (token.terminal == Terminal.DO || token.terminal == Terminal.LOCAL) {
             // epsilon
+            return new ConcSyn.OptGlobalGlobImpsEpsilon();
         } else throw new GrammarError("optGlobalGlobImps");
     }
 
-    private void globImps() throws GrammarError {
+    private ConcSyn.IGlobImps globImps() throws GrammarError {
         /*
           terminal IDENT
             <globImp> <repCommaGlobImp>
@@ -648,13 +698,15 @@ public class Parser implements ParserInterface {
           terminal FLOWMODE
             <globImp> <repCommaGlobImp>
          */
-        if (List.of(Terminal.IDENT,Terminal.CHANGEMODE,Terminal.FLOWMODE).contains(token.terminal)) {
-            globImp();
-            repCommaGlobImp();
+        if (List.of(Terminal.IDENT, Terminal.CHANGEMODE, Terminal.FLOWMODE).contains(token.terminal)) {
+            ConcSyn.GlobImps globImps = new ConcSyn.GlobImps();
+            globImps.globImp = globImp();
+            globImps.globImps = repCommaGlobImps();
+            return globImps;
         } else throw new GrammarError("globImps");
     }
 
-    private void repCommaGlobImp() throws GrammarError {
+    private ConcSyn.IGlobImps repCommaGlobImps() throws GrammarError {
         /*
           terminal COMMA
             COMMA <globImps>
@@ -665,13 +717,14 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.COMMA) {
             consume(Terminal.COMMA);
-            globImps();
+            return globImps();
         } else if (token.terminal == Terminal.DO || token.terminal == Terminal.LOCAL) {
             // epsilon
+            return new ConcSyn.GlobImpsEpsilon();
         } else throw new GrammarError("repCommaGlobImp");
     }
 
-    private void globImp() throws GrammarError {
+    private ConcSyn.IGlobImp globImp() throws GrammarError {
         /*
           terminal IDENT
             <optFlowmode> <optChangemode> IDENT
@@ -680,14 +733,16 @@ public class Parser implements ParserInterface {
           terminal FLOWMODE
             <optFlowmode> <optChangemode> IDENT
          */
-        if (List.of(Terminal.IDENT,Terminal.CHANGEMODE,Terminal.FLOWMODE).contains(token.terminal)) {
-            optFlowmode();
-            optChangemode();
-            consume(Terminal.IDENT);
+        if (List.of(Terminal.IDENT, Terminal.CHANGEMODE, Terminal.FLOWMODE).contains(token.terminal)) {
+            ConcSyn.GlobImp globImp = new ConcSyn.GlobImp();
+            globImp.optFlowmode = optFlowmode();
+            globImp.optChangemode = optChangemode();
+            globImp.identifier = (Identifier) consume(Terminal.IDENT);
+            return globImp;
         } else throw new GrammarError("globImp");
     }
 
-    private void stoDecl() throws GrammarError {
+    private ConcSyn.StoDecl stoDecl() throws GrammarError {
         /*
           terminal IDENT
             <optChangemode> <typedIdent>
@@ -695,21 +750,25 @@ public class Parser implements ParserInterface {
             <optChangemode> <typedIdent>
          */
         if (token.terminal == Terminal.IDENT || token.terminal == Terminal.CHANGEMODE) {
-            optChangemode();
-            typedIdent();
+            ConcSyn.StoDecl stoDecl = new ConcSyn.StoDecl();
+            stoDecl.optChangemode = optChangemode();
+            stoDecl.typedIdent = typedIdent();
+            return stoDecl;
         } else throw new GrammarError("stoDecl");
     }
 
-    private void progParamList() throws GrammarError {
+    private ConcSyn.IProgParamList progParamList() throws GrammarError {
         if (token.terminal == Terminal.LPAREN) {
+            ConcSyn.ProgParamList progParamList = new ConcSyn.ProgParamList();
             // LPAREN <optProgParamRepCommaProgParam> RPAREN
             consume(Terminal.LPAREN);
-            optProgParamRepCommaProgParam();
+            progParamList.optProgParamRepCommaProgParam = optProgParamRepCommaProgParam();
             consume(Terminal.RPAREN);
+            return progParamList;
         } else throw new GrammarError("progParamList");
     }
 
-    private void optProgParamRepCommaProgParam() throws GrammarError {
+    private ConcSyn.IOptProgParamRepCommaProgParam optProgParamRepCommaProgParam() throws GrammarError {
         /*
           terminal IDENT
             <progParam> <repCommaProgParam>
@@ -721,14 +780,16 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.IDENT || token.terminal == Terminal.CHANGEMODE || token.terminal == Terminal.FLOWMODE) {
-            progParam();
-            repCommaProgParam();
+            ConcSyn.OptProgParamRepCommaProgParam optProgParamRepCommaProgParam = new ConcSyn.OptProgParamRepCommaProgParam();
+            optProgParamRepCommaProgParam.progParam = progParam();
+            optProgParamRepCommaProgParam.optProgParamRepCommaProgParam = repCommaProgParam();
+            return optProgParamRepCommaProgParam;
         } else if (token.terminal == Terminal.RPAREN) {
-            // epsilon
+            return new ConcSyn.OptProgParamRepCommaProgParamEpsilon();
         } else throw new GrammarError("optProgParamRepCommaProgParam");
     }
 
-    private void repCommaProgParam() throws GrammarError {
+    private ConcSyn.IOptProgParamRepCommaProgParam repCommaProgParam() throws GrammarError {
         /*
           terminal COMMA
             COMMA <progParam> <repCommaProgParam>
@@ -736,15 +797,17 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.COMMA) {
+            ConcSyn.OptProgParamRepCommaProgParam optProgParamRepCommaProgParam = new ConcSyn.OptProgParamRepCommaProgParam();
             consume(Terminal.COMMA);
-            progParam();
-            repCommaProgParam();
+            optProgParamRepCommaProgParam.progParam = progParam();
+            optProgParamRepCommaProgParam.optProgParamRepCommaProgParam = repCommaProgParam();
+            return optProgParamRepCommaProgParam;
         } else if (token.terminal == Terminal.RPAREN) {
-            // epsilon
+            return new ConcSyn.OptProgParamRepCommaProgParamEpsilon();
         } else throw new GrammarError("repCommaProgParam");
     }
 
-    private void progParam() throws GrammarError {
+    private ConcSyn.IProgParam progParam() throws GrammarError {
         /*
           terminal IDENT
             <optFlowmode> <optChangemode> <typedIdent>
@@ -753,14 +816,16 @@ public class Parser implements ParserInterface {
           terminal FLOWMODE
             <optFlowmode> <optChangemode> <typedIdent>
          */
-        if (List.of(Terminal.IDENT,Terminal.CHANGEMODE,Terminal.FLOWMODE).contains(token.terminal)) {
-            optFlowmode();
-            optChangemode();
-            typedIdent();
+        if (List.of(Terminal.IDENT, Terminal.CHANGEMODE, Terminal.FLOWMODE).contains(token.terminal)) {
+            ConcSyn.ProgParam progParam = new ConcSyn.ProgParam();
+            progParam.optFlowmode = optFlowmode();
+            progParam.optChangemode = optChangemode();
+            progParam.typedIdent = typedIdent();
+            return progParam;
         } else throw new GrammarError("progParam");
     }
 
-    private void expr() throws GrammarError {
+    private ConcSyn.IExpr expr() throws GrammarError {
         /*
           terminal LPAREN
             <term1> <repBoolOprTerm1>
@@ -773,13 +838,15 @@ public class Parser implements ParserInterface {
           terminal LITERAL
             <term1> <repBoolOprTerm1>
          */
-        if (List.of(Terminal.LPAREN,Terminal.ADDOPR,Terminal.NOTOPR,Terminal.IDENT,Terminal.LITERAL).contains(token.terminal)) {
-            term1();
-            repBoolOprTerm1();
+        if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
+            ConcSyn.Expr expression = new ConcSyn.Expr();
+            expression.term1 = term1();
+            expression.repBoolOprTerm1 = repBoolOprTerm1();
+            return expression;
         } else throw new GrammarError("expr");
     }
 
-    private void term1() throws GrammarError {
+    private ConcSyn.ITerm1 term1() throws GrammarError {
         /*
           terminal LPAREN
             <term2> <optRelOprTerm2>
@@ -792,13 +859,15 @@ public class Parser implements ParserInterface {
           terminal LITERAL
             <term2> <optRelOprTerm2>
          */
-        if (List.of(Terminal.LPAREN,Terminal.ADDOPR,Terminal.NOTOPR,Terminal.IDENT,Terminal.LITERAL).contains(token.terminal)) {
-            term2();
-            optRelOprTerm2();
+        if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
+            ConcSyn.Term1 term1 = new ConcSyn.Term1();
+            term1.term2 = term2();
+            term1.optRelOprTerm2 = optRelOprTerm2();
+            return term1;
         } else throw new GrammarError("term1");
     }
 
-    private void optRelOprTerm2() throws GrammarError {
+    private ConcSyn.IOptRelOprTerm2 optRelOprTerm2() throws GrammarError {
         /*
           terminal RELOPR
             RELOPR <term2>
@@ -830,8 +899,10 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.RELOPR) {
-            consume(Terminal.RELOPR);
-            term2();
+            ConcSyn.OptRelOprTerm2 optRelOprTerm2 = new ConcSyn.OptRelOprTerm2();
+            optRelOprTerm2.relOpr = (RelOpr) consume(Terminal.RELOPR);
+            optRelOprTerm2.term2 = term2();
+            return optRelOprTerm2;
         } else if (List.of(
                 Terminal.COMMA,
                 Terminal.RPAREN,
@@ -846,11 +917,11 @@ public class Parser implements ParserInterface {
                 Terminal.SEMICOLON,
                 Terminal.BECOMES,
                 Terminal.BOOLOPR).contains(token.terminal)) {
-            // epsilon
+            return new ConcSyn.OptRelOprTerm2Epsilon();
         } else throw new GrammarError("optRelOprTerm2");
     }
 
-    private void term2() throws GrammarError {
+    private ConcSyn.ITerm2 term2() throws GrammarError {
         /*
           terminal LPAREN
             <term3> <repAddOprTerm3>
@@ -863,13 +934,15 @@ public class Parser implements ParserInterface {
           terminal LITERAL
             <term3> <repAddOprTerm3>
          */
-        if (List.of(Terminal.LPAREN,Terminal.ADDOPR,Terminal.NOTOPR,Terminal.IDENT,Terminal.LITERAL).contains(token.terminal)) {
-            term3();
-            repAddOprTerm3();
+        if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
+            ConcSyn.Term2 term2 = new ConcSyn.Term2();
+            term2.term3 = term3();
+            term2.repAddOprTerm3 = repAddOprTerm3();
+            return term2;
         } else throw new GrammarError("term2");
     }
 
-    private void repAddOprTerm3() throws GrammarError {
+    private ConcSyn.IRepAddOprTerm3 repAddOprTerm3() throws GrammarError {
         /*
           terminal ADDOPR
             ADDOPR <term3> <repAddOprTerm3>
@@ -903,9 +976,11 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.ADDOPR) {
-            consume(Terminal.ADDOPR);
-            term3();
-            repAddOprTerm3();
+            ConcSyn.RepAddOprTerm3 repAddOprTerm3 = new ConcSyn.RepAddOprTerm3();
+            repAddOprTerm3.addOpr = (AddOpr) consume(Terminal.ADDOPR);
+            repAddOprTerm3.term3 = term3();
+            repAddOprTerm3.repAddOprTerm3 = repAddOprTerm3();
+            return repAddOprTerm3;
         } else if (List.of(
                 Terminal.COMMA,
                 Terminal.RPAREN,
@@ -921,11 +996,11 @@ public class Parser implements ParserInterface {
                 Terminal.BECOMES,
                 Terminal.BOOLOPR,
                 Terminal.RELOPR).contains(token.terminal)) {
-            // epsilon
+            return new ConcSyn.RepAddOprTerm3Epsilon();
         } else throw new GrammarError("repAddOprTerm3");
     }
 
-    private void term3() throws GrammarError {
+    private ConcSyn.ITerm3 term3() throws GrammarError {
         /*
           terminal LPAREN
             <factor> <repMultOprFactor>
@@ -938,13 +1013,15 @@ public class Parser implements ParserInterface {
           terminal LITERAL
             <factor> <repMultOprFactor>
          */
-        if (List.of(Terminal.LPAREN,Terminal.ADDOPR,Terminal.NOTOPR,Terminal.IDENT,Terminal.LITERAL).contains(token.terminal)) {
-            factor();
-            repMultOprFactor();
+        if (List.of(Terminal.LPAREN, Terminal.ADDOPR, Terminal.NOTOPR, Terminal.IDENT, Terminal.LITERAL).contains(token.terminal)) {
+            ConcSyn.Term3 term3 = new ConcSyn.Term3();
+            term3.factor = factor();
+            term3.repMultOprFactor = repMultOprFactor();
+            return term3;
         } else throw new GrammarError("term3");
     }
 
-    private void repMultOprFactor() throws GrammarError {
+    private ConcSyn.IRepMultOprFactor repMultOprFactor() throws GrammarError {
         /*
           terminal MULTOPR
             MULTOPR <factor> <repMultOprFactor>
@@ -980,9 +1057,11 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.MULTOPR) {
-            consume(Terminal.MULTOPR);
-            factor();
-            repMultOprFactor();
+            ConcSyn.RepMultOprFactor repMultOprFactor = new ConcSyn.RepMultOprFactor();
+            repMultOprFactor.multOpr = (MultOpr) consume(Terminal.MULTOPR);
+            repMultOprFactor.factor = factor();
+            repMultOprFactor.repMultOprFactor = repMultOprFactor();
+            return repMultOprFactor;
         } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
@@ -999,10 +1078,11 @@ public class Parser implements ParserInterface {
                 Terminal.RELOPR,
                 Terminal.ADDOPR).contains(token.terminal)) {
             // epsilon
+            return new ConcSyn.RepMultOprFactorEpsilon();
         } else throw new GrammarError("repMultOprFactor");
     }
 
-    private void factor() throws GrammarError {
+    private ConcSyn.IFactor factor() throws GrammarError {
         /*
           terminal LITERAL
             LITERAL
@@ -1016,21 +1096,29 @@ public class Parser implements ParserInterface {
             LPAREN <expr> RPAREN
          */
         if (token.terminal == Terminal.LITERAL) {
-            consume(Terminal.LITERAL);
+            ConcSyn.LiteralFactor literalFactor = new ConcSyn.LiteralFactor();
+            literalFactor.literal = (Literal) consume(Terminal.LITERAL);
+            return literalFactor;
         } else if (token.terminal == Terminal.IDENT) {
-            consume(Terminal.IDENT);
-            optInitOrExprListOrRecordAccess();
+            ConcSyn.IdentFactor identFactor = new ConcSyn.IdentFactor();
+            identFactor.identifier = (Identifier) consume(Terminal.IDENT);
+            identFactor.optInitOrExpressionListOrRecordAccess = optInitOrExprListOrRecordAccess();
+            return identFactor;
         } else if (token.terminal == Terminal.ADDOPR || token.terminal == Terminal.NOTOPR) {
-            monadicOpr();
-            factor();
+            ConcSyn.MonadicFactor monadicFactor = new ConcSyn.MonadicFactor();
+            monadicFactor.monadicOpr = monadicOpr();
+            monadicFactor.factor = factor();
+            return monadicFactor;
         } else if (token.terminal == Terminal.LPAREN) {
+            ConcSyn.ExpressionFactor expressionFactor = new ConcSyn.ExpressionFactor();
             consume(Terminal.LPAREN);
-            expr();
+            expressionFactor.expression = expr();
             consume(Terminal.RPAREN);
+            return expressionFactor;
         } else throw new GrammarError("factor");
     }
 
-    private void optInitOrExprListOrRecordAccess() throws GrammarError {
+    private ConcSyn.IOptInitOrExpressionListOrRecordAccess optInitOrExprListOrRecordAccess() throws GrammarError {
         /*
           terminal INIT
             INIT
@@ -1073,10 +1161,11 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.INIT) {
             consume(Terminal.INIT);
+            return new ConcSyn.Init();
         } else if (token.terminal == Terminal.LPAREN) {
-            exprList();
+            return exprList();
         } else if (token.terminal == Terminal.ACCESSOPR) {
-            recordAccess();
+            return recordAccess();
         } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
@@ -1094,22 +1183,25 @@ public class Parser implements ParserInterface {
                 Terminal.RELOPR,
                 Terminal.ADDOPR).contains(token.terminal)) {
             // epsilon
+            return new ConcSyn.OptInitOrExpressionListOrRecordAccessEpsilon();
         } else throw new GrammarError("optInitOrExprListOrRecordAccess");
     }
 
-    private void recordAccess() throws GrammarError {
+    private ConcSyn.IRecordAccess recordAccess() throws GrammarError {
         /*
           terminal ACCESSOPR
             ACCESSOPR IDENT <optRecordAccess>
          */
         if (token.terminal == Terminal.ACCESSOPR) {
+            ConcSyn.RecordAccess recordAccess = new ConcSyn.RecordAccess();
             consume(Terminal.ACCESSOPR);
-            consume(Terminal.IDENT);
-            optRecordAccess();
+            recordAccess.identifier = (Identifier) consume(Terminal.IDENT);
+            recordAccess.optRecordAccess = optRecordAccess();
+            return recordAccess;
         } else throw new GrammarError("recordAccess");
     }
 
-    private void optRecordAccess() throws GrammarError {
+    private ConcSyn.IRecordAccess optRecordAccess() throws GrammarError {
         /*
           terminal ACCESSOPR
             ACCESSOPR IDENT <optRecordAccess>
@@ -1147,9 +1239,7 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.ACCESSOPR) {
-            consume(Terminal.ACCESSOPR);
-            consume(Terminal.IDENT);
-            optRecordAccess();
+            return recordAccess();
         } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
@@ -1167,10 +1257,11 @@ public class Parser implements ParserInterface {
                 Terminal.ADDOPR,
                 Terminal.MULTOPR).contains(token.terminal)) {
             // epsilon
+            return new ConcSyn.RecordAccessEpsilon();
         } else throw new GrammarError("optRecordAccess");
     }
 
-    private void monadicOpr() throws GrammarError {
+    private ConcSyn.IMonadicOpr monadicOpr() throws GrammarError {
         /*
           terminal NOTOPR
             NOTOPR
@@ -1179,12 +1270,14 @@ public class Parser implements ParserInterface {
          */
         if (token.terminal == Terminal.NOTOPR) {
             consume(Terminal.NOTOPR);
+            return new ConcSyn.NotMonadicOpr();
         } else if (token.terminal == Terminal.ADDOPR) {
             consume(Terminal.ADDOPR);
+            return new ConcSyn.AddMonadicOpr();
         } else throw new GrammarError("monadicOpr");
     }
 
-    private void repBoolOprTerm1() throws GrammarError {
+    private ConcSyn.IRepBoolOprTerm1 repBoolOprTerm1() throws GrammarError {
         /*
           terminal BOOLOPR
             BOOLOPR <term1> <repBoolOprTerm1>
@@ -1214,9 +1307,11 @@ public class Parser implements ParserInterface {
 
          */
         if (token.terminal == Terminal.BOOLOPR) {
-            consume(Terminal.BOOLOPR);
-            term1();
-            repBoolOprTerm1();
+            ConcSyn.RepBoolOprTerm1 repBoolOprTerm1 = new ConcSyn.RepBoolOprTerm1();
+            repBoolOprTerm1.boolOpr = (BoolOpr) consume(Terminal.BOOLOPR);
+            repBoolOprTerm1.term1 = term1();
+            repBoolOprTerm1.repBoolOprTerm1 = repBoolOprTerm1();
+            return repBoolOprTerm1;
         } else if (List.of(Terminal.COMMA,
                 Terminal.RPAREN,
                 Terminal.DO,
@@ -1229,7 +1324,7 @@ public class Parser implements ParserInterface {
                 Terminal.ENDPROGRAM,
                 Terminal.SEMICOLON,
                 Terminal.BECOMES).contains(token.terminal)) {
-            // epsilon
+            return new ConcSyn.RepBoolOprTerm1Epsilon();
         } else throw new GrammarError("repBoolOprTerm1");
     }
 }

@@ -1,4 +1,4 @@
-package ch.fhnw.cpib.tokens;
+package ch.fhnw.cpib.lexer.tokens;
 
 public class BoolOpr extends Token {
 
