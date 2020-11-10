@@ -1,5 +1,6 @@
 package ch.fhnw.cpib;
 
+import ch.fhnw.cpib.exceptions.LexicalError;
 import ch.fhnw.cpib.tokens.*;
 
 import java.util.ArrayList;
@@ -22,21 +23,23 @@ public class Scanner {
             switch (state) {
                 case 0:
                     if (c == '(') {
-                        tokenList.add(new Token(Terminal.PAREN_OPEN));
+                        tokenList.add(new Token(Terminal.LPAREN));
                     } else if (c == ',') {
                         tokenList.add(new Token(Terminal.COMMA));
                     } else if (c == ')') {
-                        tokenList.add(new Token(Terminal.PAREN_CLOSE));
+                        tokenList.add(new Token(Terminal.RPAREN));
                     } else if (c == ';') {
                         tokenList.add(new Token(Terminal.SEMICOLON));
                     } else if (c == '=') {
-                        tokenList.add(new Token(Terminal.OP_EQ));
+                        tokenList.add(new RelOpr(RelOpr.Attr.EQ));
                     } else if (c == '+') {
-                        tokenList.add(new Token(Terminal.OP_ADD));
+                        tokenList.add(new AddOpr(AddOpr.Attr.PLUS));
                     } else if (c == '-') {
-                        tokenList.add(new Token(Terminal.OP_SUB));
+                        tokenList.add(new AddOpr(AddOpr.Attr.MINUS));
                     } else if (c == '*') {
-                        tokenList.add(new Token(Terminal.OP_MUL));
+                        tokenList.add(new MultOpr(MultOpr.Attr.TIMES));
+                    } else if (c == '.') {
+                        tokenList.add(new Token(Terminal.ACCESSOPR));
                     } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
                         lexAccu = new StringBuilder();
                         lexAccu.append(c);
@@ -77,7 +80,7 @@ public class Scanner {
                     } else {
                         state = 0;
                         i--;
-                        tokenList.add(new NumberLiteral((int) numAccu));
+                        tokenList.add(new Literal((int) numAccu));
                         numAccu = 0;
                     }
                     break;
@@ -87,7 +90,7 @@ public class Scanner {
                     } else if (c == '\\') {
                         state = 6;
                     } else if (c == '=') {
-                        tokenList.add(new Token(Terminal.OP_NEQ));
+                        tokenList.add(new RelOpr(RelOpr.Attr.NE));
                         state = 0;
                     } else {
                         throw new LexicalError(c, i);
@@ -96,7 +99,8 @@ public class Scanner {
                 case 4:
                     if (c == '\n') {
                         if (lexAccu != null) {
-                            tokenList.add(new Comment(lexAccu.toString()));
+                            // skip comments
+                            // tokenList.add(new Comment(lexAccu.toString()));
                             lexAccu = null;
                         }
                         state = 0;
@@ -108,7 +112,7 @@ public class Scanner {
                     break;
                 case 5:
                     if (c == '=') {
-                        tokenList.add(new Token(Terminal.OP_ASSIGN));
+                        tokenList.add(new Token(Terminal.BECOMES));
                         state = 0;
                     } else {
                         tokenList.add(new Token(Terminal.COLON));
@@ -118,7 +122,7 @@ public class Scanner {
                     break;
                 case 6:
                     if (c == '?') {
-                        tokenList.add(new Token(Terminal.OP_COND_AND));
+                        tokenList.add(new BoolOpr(BoolOpr.Attr.CAND));
                         state = 0;
                     } else {
                         throw new LexicalError(c, i);
@@ -133,7 +137,7 @@ public class Scanner {
                     break;
                 case 8:
                     if (c == '?') {
-                        tokenList.add(new Token(Terminal.OP_COND_OR));
+                        tokenList.add(new BoolOpr(BoolOpr.Attr.COR));
                         state = 0;
                     } else {
                         throw new LexicalError(c, i);
@@ -141,20 +145,20 @@ public class Scanner {
                     break;
                 case 9:
                     if (c == '=') {
-                        tokenList.add(new Token(Terminal.OP_LTE));
+                        tokenList.add(new RelOpr(RelOpr.Attr.LE));
                         state = 0;
                     } else {
-                        tokenList.add(new Token(Terminal.OP_LT));
+                        tokenList.add(new RelOpr(RelOpr.Attr.LT));
                         state = 0;
                         i--;
                     }
                     break;
                 case 10:
                     if (c == '=') {
-                        tokenList.add(new Token(Terminal.OP_GTE));
+                        tokenList.add(new RelOpr(RelOpr.Attr.GE));
                         state = 0;
                     } else {
-                        tokenList.add(new Token(Terminal.OP_GT));
+                        tokenList.add(new RelOpr(RelOpr.Attr.GT));
                         state = 0;
                         i--;
                     }
@@ -171,6 +175,6 @@ public class Scanner {
     }
 
     private static Token tokenFromIdentifier(String identifier) {
-        return Terminal.identifierToKeyword(identifier).map(Token::new).orElse(new Identifier(identifier));
+        return Terminal.identifierToKeyword(identifier).orElse(new Identifier(identifier));
     }
 }

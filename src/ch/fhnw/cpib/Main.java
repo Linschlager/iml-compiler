@@ -1,5 +1,6 @@
 package ch.fhnw.cpib;
 
+import ch.fhnw.cpib.parser.Parser;
 import ch.fhnw.cpib.tokens.Token;
 
 import java.nio.file.Files;
@@ -12,5 +13,6 @@ public class Main {
         input = Files.readString(Path.of("intDiv.iml.txt"));
         List<Token> tokens = Scanner.scan(input);
         System.out.println(tokens);
+        new Parser(tokens).parse();
     }
 }
