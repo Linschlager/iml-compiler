@@ -261,10 +261,17 @@ public class ConcSyn {
     }
     static class OptElseCpsCmdEpsilon implements IOptElseCpsCmd {}
 
+    interface IRepCommaIdents {}
+    static class RepCommaIdents implements IRepCommaIdents {
+        Identifier identifier;
+        IRepCommaIdents repCommaIdents;
+    }
+    static class RepCommaIdentsEpsilon implements IRepCommaIdents {}
+
     interface IOptGlobInits {}
     static class OptGlobInits implements IOptGlobInits {
         Identifier identifier;
-        IOptGlobInits optGlobInits;
+        IRepCommaIdents repCommaIdents;
     }
     static class OptGlobInitsEpsilon implements IOptGlobInits {}
 
@@ -310,6 +317,7 @@ public class ConcSyn {
 
     public interface IProgram {}
     static class Program implements IProgram {
+        public Identifier identifier;
         public IProgParamList progParamList;
         public IOptGlobalCpsDecl optGlobalCpsDecl;
         public ICpsCmd cpsCmd;

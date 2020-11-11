@@ -13,7 +13,6 @@ public class Main {
         String input = "foo while 3+89 while+ foobar+ +while\n";
         input = Files.readString(Path.of("intDiv.iml.txt"));
         ITokenList tokens = new Scanner(input).scan();
-        System.out.println(tokens);
         ConcSyn.IProgram program = new Parser(tokens).parse();
     }
 }

@@ -44,7 +44,7 @@ public class Parser implements IParser {
             // PROGRAM IDENT <progParamList> <optGlobalCpsDecl> DO <cpsCmd> ENDPROGRAM
             ConcSyn.Program program = new ConcSyn.Program();
             consume(Terminal.PROGRAM);
-            consume(Terminal.IDENT);
+            program.identifier = (Identifier) consume(Terminal.IDENT);
             program.progParamList = progParamList();
             program.optGlobalCpsDecl = optGlobalCpsDecl();
             consume(Terminal.DO);
@@ -595,11 +595,35 @@ public class Parser implements IParser {
             ConcSyn.OptGlobInits optGlobInits = new ConcSyn.OptGlobInits();
             consume(Terminal.INIT);
             optGlobInits.identifier = (Identifier) consume(Terminal.IDENT);
-            optGlobInits.optGlobInits = optGlobInits;
+            optGlobInits.repCommaIdents = repCommaIdents();
             return optGlobInits;
         } else if (List.of(Terminal.ENDWHILE, Terminal.ENDIF, Terminal.ELSE, Terminal.ENDPROC, Terminal.ENDFUN, Terminal.ENDPROGRAM, Terminal.SEMICOLON).contains(token.terminal)) {
             return new ConcSyn.OptGlobInitsEpsilon();
         } else throw new GrammarError("optGlobInits");
+    }
+
+    private ConcSyn.IRepCommaIdents repCommaIdents() throws GrammarError {
+        /*
+          terminal COMMA
+            COMMA IDENT <repCommaIdent>
+          terminal ENDWHILE
+          terminal ENDIF
+          terminal ELSE
+          terminal ENDPROC
+          terminal ENDFUN
+          terminal ENDPROGRAM
+          terminal SEMICOLON
+         */
+        if (token.terminal == Terminal.COMMA) {
+            ConcSyn.RepCommaIdents repCommaIdents = new ConcSyn.RepCommaIdents();
+            consume(Terminal.COMMA);
+            repCommaIdents.identifier = (Identifier) consume(Terminal.IDENT);
+            repCommaIdents.repCommaIdents = repCommaIdents();
+            return repCommaIdents;
+        } else if(List.of(Terminal.ENDWHILE,Terminal.ENDIF,Terminal.ELSE,Terminal.ENDPROC,Terminal.ENDFUN,Terminal.ENDPROGRAM,Terminal.SEMICOLON).contains(token.terminal)) {
+            // epsilon
+            return new ConcSyn.RepCommaIdentsEpsilon();
+        } else throw new GrammarError("repCommaIdent");
     }
 
     private ConcSyn.IOptElseCpsCmd optElseCpsCmd() throws GrammarError {
