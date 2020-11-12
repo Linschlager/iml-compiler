@@ -1,4 +1,4 @@
-package ch.fhnw.cpib.tokens;
+package ch.fhnw.cpib.lexer.tokens;
 
 public class AddOpr extends Token {
     private final Attr attr;

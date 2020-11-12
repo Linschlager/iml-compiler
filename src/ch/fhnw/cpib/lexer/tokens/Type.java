@@ -1,4 +1,4 @@
-package ch.fhnw.cpib.tokens;
+package ch.fhnw.cpib.lexer.tokens;
 
 public class Type extends Token {
     private final Attr attr;

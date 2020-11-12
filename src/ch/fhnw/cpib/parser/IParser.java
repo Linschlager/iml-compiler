@@ -2,7 +2,7 @@ package ch.fhnw.cpib.parser;
 
 import ch.fhnw.cpib.exceptions.GrammarError;
 
-public interface ParserInterface {
+public interface IParser {
 
-    void parse() throws GrammarError;
+    ConcSyn.IProgram parse() throws GrammarError;
 }
