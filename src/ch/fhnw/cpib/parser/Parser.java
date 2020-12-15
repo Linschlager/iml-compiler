@@ -1297,7 +1297,7 @@ public class Parser implements IParser {
             return new ConcSyn.NotMonadicOpr();
         } else if (token.terminal == Terminal.ADDOPR) {
             consume(Terminal.ADDOPR);
-            return new ConcSyn.AddMonadicOpr();
+            return new ConcSyn.PosMonadicOpr();
         } else throw new GrammarError("monadicOpr");
     }
 

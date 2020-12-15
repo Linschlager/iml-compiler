@@ -2,124 +2,360 @@ package ch.fhnw.cpib.parser;
 
 import ch.fhnw.cpib.lexer.tokens.*;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class ConcSyn {
-    interface IType {}
+    interface IType {
+        public AbsSyn.IType toAbsSyn();
+    }
     static class TraditionalType implements IType {
         public Type type;
+
+        @Override
+        public AbsSyn.TraditionalType toAbsSyn() {
+            return new AbsSyn.TraditionalType(type);
+        }
     }
     static class RecordType implements IType {
         public Identifier name;
+
+        @Override
+        public AbsSyn.RecordType toAbsSyn() {
+            return new AbsSyn.RecordType(name.ident);
+        }
     }
 
-    interface IOptFlowmode {}
+    interface IOptFlowmode {
+        public AbsSyn.IFlowMode toAbsSyn();
+    }
     static class OptFlowmode implements IOptFlowmode {
         public Flowmode flowmode;
-    }
-    static class OptFlowmodeEpsilon implements IOptFlowmode {}
 
-    interface IOptMechmode {}
+        @Override
+        public AbsSyn.IFlowMode toAbsSyn() {
+            return switch (flowmode.attr) {
+                case IN -> new AbsSyn.InFlowMode();
+                case INOUT -> new AbsSyn.InOutFlowMode();
+                case OUT -> new AbsSyn.OutFlowMode();
+            };
+        }
+    }
+    static class OptFlowmodeEpsilon implements IOptFlowmode {
+        @Override
+        public AbsSyn.IFlowMode toAbsSyn() {return null;}
+    }
+
+    interface IOptMechmode {
+        public AbsSyn.IMechMode toAbsSyn();
+    }
     static class OptMechmode implements IOptMechmode {
         public Mechmode mechmode;
-    }
-    static class OptMechmodeEpsilon implements IOptMechmode {}
 
-    interface IOptChangemode {}
+        @Override
+        public AbsSyn.IMechMode toAbsSyn() {
+            return switch (mechmode.attr) {
+                case COPY -> new AbsSyn.CopyMechMode();
+                case REF -> new AbsSyn.RefMechMode();
+            };
+        }
+    }
+    static class OptMechmodeEpsilon implements IOptMechmode {
+        @Override
+        public AbsSyn.IMechMode toAbsSyn() {return null;}
+    }
+
+    interface IOptChangemode {
+        public AbsSyn.IChangeMode toAbsSyn();
+    }
     static class OptChangemode implements IOptChangemode {
         public Changemode changemode;
-    }
-    static class OptChangemodeEpsilon implements IOptChangemode {}
 
-    interface ITypedIdent {}
+        @Override
+        public AbsSyn.IChangeMode toAbsSyn() {
+            return switch (changemode.attr) {
+                case VAR -> new AbsSyn.VarChangeMode();
+                case CONST -> new AbsSyn.ConstChangeMode();
+            };
+        }
+    }
+    static class OptChangemodeEpsilon implements IOptChangemode {
+        @Override
+        public AbsSyn.IChangeMode toAbsSyn() {return null;}
+    }
+
+    interface ITypedIdent {
+        public AbsSyn.ITypedIdentifier toAbsSyn();
+    }
     static class TypedIdent implements ITypedIdent {
         public Identifier identifier;
         public IType type;
+
+        @Override
+        public AbsSyn.ITypedIdentifier toAbsSyn() {
+            return new AbsSyn.TypedIdentifier(identifier.ident, type.toAbsSyn());
+        }
     }
 
-    interface IProgParam {}
+    interface IProgParam {
+        public AbsSyn.IProgramParameter toAbsSyn();
+    }
     static class ProgParam implements IProgParam {
         public IOptFlowmode optFlowmode;
         public IOptChangemode optChangemode;
         public ITypedIdent typedIdent;
+
+        @Override
+        public AbsSyn.IProgramParameter toAbsSyn() {
+            return new AbsSyn.ProgramParameter(
+                    optFlowmode.toAbsSyn(),
+                    optChangemode.toAbsSyn(),
+                    typedIdent.toAbsSyn()
+            );
+        }
     }
-    interface IOptProgParamRepCommaProgParam {}
+    interface IOptProgParamRepCommaProgParam {
+        public List<AbsSyn.IProgramParameter> toAbsSyn();
+    }
     static class OptProgParamRepCommaProgParam implements IOptProgParamRepCommaProgParam {
         public IProgParam progParam;
         public IOptProgParamRepCommaProgParam optProgParamRepCommaProgParam;
+
+        @Override
+        public List<AbsSyn.IProgramParameter> toAbsSyn() {
+            List<AbsSyn.IProgramParameter> list = new LinkedList<>();
+            list.add(progParam.toAbsSyn());
+            List<AbsSyn.IProgramParameter> next = optProgParamRepCommaProgParam.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
     }
-    static class OptProgParamRepCommaProgParamEpsilon implements IOptProgParamRepCommaProgParam {}
-    interface IProgParamList {}
-    static class ProgParamList implements IProgParamList {
-        public IOptProgParamRepCommaProgParam optProgParamRepCommaProgParam;
+    static class OptProgParamRepCommaProgParamEpsilon implements IOptProgParamRepCommaProgParam {
+        @Override
+        public List<AbsSyn.IProgramParameter> toAbsSyn() {
+            return new LinkedList<>();
+        }
     }
 
-    interface IParam {}
+    interface IProgParamList {
+        public List<AbsSyn.IProgramParameter> toAbsSyn();
+    }
+    static class ProgParamList implements IProgParamList {
+        public IOptProgParamRepCommaProgParam optProgParamRepCommaProgParam;
+
+        @Override
+        public List<AbsSyn.IProgramParameter> toAbsSyn() {
+            return optProgParamRepCommaProgParam.toAbsSyn();
+        }
+    }
+
+    interface IParam {
+        public AbsSyn.IParameter toAbsSyn();
+    }
     static class Param implements IParam {
         IOptFlowmode optFlowmode;
         IOptMechmode optMechmode;
         IOptChangemode optChangemode;
         ITypedIdent typedIdent;
-    }
-    static class ParamEpsilon implements IParam {}
 
-    interface IOptParamRepCommaParam {}
+        @Override
+        public AbsSyn.IParameter toAbsSyn() {
+            return new AbsSyn.Parameter(
+                    optFlowmode.toAbsSyn(),
+                    optMechmode.toAbsSyn(),
+                    optChangemode.toAbsSyn(),
+                    typedIdent.toAbsSyn()
+            );
+        }
+    }
+    static class ParamEpsilon implements IParam {
+        @Override
+        public AbsSyn.IParameter toAbsSyn() {
+            return null;
+        }
+    }
+
+    interface IOptParamRepCommaParam {
+        public List<AbsSyn.IParameter> toAbsSyn();
+    }
     static class OptParamRepCommaParam implements IOptParamRepCommaParam {
         IParam param;
         IOptParamRepCommaParam optParamRepCommaParam;
-    }
-    static class OptParamRepCommaParamEpsilon implements IOptParamRepCommaParam {}
 
-    interface IParamList {}
+        @Override
+        public List<AbsSyn.IParameter> toAbsSyn() {
+            List<AbsSyn.IParameter> list = new LinkedList<>();
+            list.add(param.toAbsSyn());
+            List<AbsSyn.IParameter> next = optParamRepCommaParam.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class OptParamRepCommaParamEpsilon implements IOptParamRepCommaParam {
+        @Override
+        public List<AbsSyn.IParameter> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IParamList {
+        public List<AbsSyn.IParameter> toAbsSyn();
+    }
     static class ParamList implements IParamList {
         IOptParamRepCommaParam optParamRepCommaParam;
+
+        @Override
+        public List<AbsSyn.IParameter> toAbsSyn() {
+            return optParamRepCommaParam.toAbsSyn();
+        }
     }
 
-    interface IGlobImp {}
+    interface IGlobImp {
+        public AbsSyn.IGlobalImport toAbsSyn();
+    }
     static class GlobImp implements IGlobImp {
         IOptFlowmode optFlowmode;
         IOptChangemode optChangemode;
         Identifier identifier;
+
+        @Override
+        public AbsSyn.IGlobalImport toAbsSyn() {
+            return new AbsSyn.GlobalImport(
+                    optFlowmode.toAbsSyn(),
+                    optChangemode.toAbsSyn(),
+                    identifier.ident
+            );
+        }
     }
 
-    interface IGlobImps {}
+    interface IGlobImps {
+        public List<AbsSyn.IGlobalImport> toAbsSyn();
+    }
     static class GlobImps implements IGlobImps {
         IGlobImp globImp;
         IGlobImps globImps;
-    }
-    static class GlobImpsEpsilon implements IGlobImps {}
 
-    interface IOptGlobalGlobImps {}
+        @Override
+        public List<AbsSyn.IGlobalImport> toAbsSyn() {
+            List<AbsSyn.IGlobalImport> list = new LinkedList<>();
+            list.add(globImp.toAbsSyn());
+            List<AbsSyn.IGlobalImport> next = globImps.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class GlobImpsEpsilon implements IGlobImps {
+        @Override
+        public List<AbsSyn.IGlobalImport> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IOptGlobalGlobImps {
+        public List<AbsSyn.IGlobalImport> toAbsSyn();
+    }
     static class OptGlobalGlobImps implements IOptGlobalGlobImps {
         IGlobImps globImps;
-    }
-    static class OptGlobalGlobImpsEpsilon implements IOptGlobalGlobImps {}
 
-    interface ICpsStoDecl {}
+        @Override
+        public List<AbsSyn.IGlobalImport> toAbsSyn() {
+            return globImps.toAbsSyn();
+        }
+    }
+    static class OptGlobalGlobImpsEpsilon implements IOptGlobalGlobImps {
+        @Override
+        public List<AbsSyn.IGlobalImport> toAbsSyn() {
+            return null;
+        }
+    }
+
+    interface ICpsStoDecl {
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn();
+    }
     static class CpsStoDecl implements ICpsStoDecl {
         IStoDecl stoDecl;
         ICpsStoDecl cpsStoDecl;
-    }
-    static class CpsStoDeclEpsilon implements ICpsStoDecl {}
 
-    interface IOptLocalCpsStoDecl {}
+        @Override
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn() {
+            List<AbsSyn.IStorageDeclaration> list = new LinkedList<>();
+            list.add(stoDecl.toAbsSyn());
+            List<AbsSyn.IStorageDeclaration> next = cpsStoDecl.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class CpsStoDeclEpsilon implements ICpsStoDecl {
+        @Override
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IOptLocalCpsStoDecl {
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn();
+    }
     static class OptLocalCpsStoDecl implements IOptLocalCpsStoDecl {
         ICpsStoDecl cpsStoDecl;
-    }
-    static class OptLocalCpsStoDeclEpsilon implements IOptLocalCpsStoDecl {}
 
-    interface ICpsTypedIdent {}
+        @Override
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn() {
+            return cpsStoDecl.toAbsSyn();
+        }
+    }
+    static class OptLocalCpsStoDeclEpsilon implements IOptLocalCpsStoDecl {
+        @Override
+        public List<AbsSyn.IStorageDeclaration> toAbsSyn() {
+            return null;
+        }
+    }
+
+    interface ICpsTypedIdent {
+        public List<AbsSyn.ITypedIdentifier> toAbsSyn();
+    }
     static class CpsTypedIdent implements ICpsTypedIdent {
         ITypedIdent typedIdent;
         ICpsTypedIdent cpsTypedIdent;
-    }
-    static class CpsTypedIdentEpsilon implements ICpsTypedIdent {}
 
-    interface IDecl {}
-    interface IStoDecl extends IDecl {}
+        @Override
+        public List<AbsSyn.ITypedIdentifier> toAbsSyn() {
+            List<AbsSyn.ITypedIdentifier> list = new LinkedList<>();
+            list.add(typedIdent.toAbsSyn());
+            List<AbsSyn.ITypedIdentifier> next = cpsTypedIdent.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class CpsTypedIdentEpsilon implements ICpsTypedIdent {
+        @Override
+        public List<AbsSyn.ITypedIdentifier> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IDecl {
+        public AbsSyn.IDeclaration toAbsSyn();
+    }
+    interface IStoDecl extends IDecl {
+        @Override
+        public AbsSyn.IStorageDeclaration toAbsSyn();
+    }
     static class StoDecl implements IStoDecl {
         public IOptChangemode optChangemode;
         public ITypedIdent typedIdent;
+
+        @Override
+        public AbsSyn.IStorageDeclaration toAbsSyn() {
+            return new AbsSyn.StorageDeclaration(
+                    optChangemode.toAbsSyn(),
+                    typedIdent.toAbsSyn()
+            );
+        }
     }
-    interface IFunDecl extends IDecl {}
+    interface IFunDecl extends IDecl {
+        @Override
+        public AbsSyn.IFunctionDeclaration toAbsSyn();
+    }
     static class FunDecl implements IFunDecl {
         Identifier name;
         IParamList paramList;
@@ -127,50 +363,150 @@ public class ConcSyn {
         IOptGlobalGlobImps optGlobalGlobImps;
         IOptLocalCpsStoDecl optLocalCpsStoDecl;
         ICpsCmd cpsCmd;
+
+        @Override
+        public AbsSyn.IFunctionDeclaration toAbsSyn() {
+            return new AbsSyn.FunctionDeclaration(
+                    name.ident,
+                    paramList.toAbsSyn(),
+                    stoDecl.toAbsSyn(),
+                    optGlobalGlobImps.toAbsSyn(),
+                    optLocalCpsStoDecl.toAbsSyn(),
+                    cpsCmd.toAbsSyn()
+            );
+        }
     }
-    interface IProcDecl extends IDecl {}
+    interface IProcDecl extends IDecl {
+        @Override
+        AbsSyn.IProcedureDeclaration toAbsSyn();
+    }
     static class ProcDecl implements IProcDecl {
         Identifier name;
         IParamList paramList;
         IOptGlobalGlobImps optGlobalGlobImps;
         IOptLocalCpsStoDecl optLocalCpsStoDecl;
         ICpsCmd cpsCmd;
+
+        @Override
+        public AbsSyn.IProcedureDeclaration toAbsSyn() {
+            return new AbsSyn.ProcedureDeclaration(
+                    name.ident,
+                    paramList.toAbsSyn(),
+                    optGlobalGlobImps.toAbsSyn(),
+                    optLocalCpsStoDecl.toAbsSyn(),
+                    cpsCmd.toAbsSyn()
+            );
+        }
     }
-    interface IRecordShapeDecl extends IDecl {}
+    interface IRecordShapeDecl extends IDecl {
+        @Override
+        AbsSyn.IRecordShapeDeclaration toAbsSyn();
+    }
     static class RecordShapeDecl implements IRecordShapeDecl {
         Identifier name;
         ICpsTypedIdent cpsTypedIdent;
+
+        @Override
+        public AbsSyn.IRecordShapeDeclaration toAbsSyn() {
+            return new AbsSyn.RecordShapeDeclaration(
+                    name.ident,
+                    cpsTypedIdent.toAbsSyn()
+            );
+        }
     }
 
-    interface ICpsDecl {}
+    interface ICpsDecl {
+        public List<AbsSyn.IDeclaration> toAbsSyn();
+    }
     static class CpsDecl implements ICpsDecl {
         public IDecl decl;
         public ICpsDecl cpsDecl;
-    }
-    static class CpsDeclEpsilon implements ICpsDecl {}
 
-    interface IOptGlobalCpsDecl {}
+        @Override
+        public List<AbsSyn.IDeclaration> toAbsSyn() {
+            List<AbsSyn.IDeclaration> list = new LinkedList<>();
+            list.add(decl.toAbsSyn());
+            List<AbsSyn.IDeclaration> next = cpsDecl.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class CpsDeclEpsilon implements ICpsDecl {
+        @Override
+        public List<AbsSyn.IDeclaration> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IOptGlobalCpsDecl {
+        public List<AbsSyn.IDeclaration> toAbsSyn();
+    }
     static class OptGlobalCpsDecl implements IOptGlobalCpsDecl {
         public ICpsDecl cpsDecl;
-    }
-    static class OptGlobalCpsDeclEpsilon implements IOptGlobalCpsDecl {}
 
-    interface IOptExprRepCommaExpr {}
+        @Override
+        public List<AbsSyn.IDeclaration> toAbsSyn() {
+            return cpsDecl.toAbsSyn();
+        }
+    }
+    static class OptGlobalCpsDeclEpsilon implements IOptGlobalCpsDecl {
+        @Override
+        public List<AbsSyn.IDeclaration> toAbsSyn() {
+            return null;
+        }
+    }
+
+    interface IOptExprRepCommaExpr {
+        public List<AbsSyn.IExpression> toAbsSyn();
+    }
     static class OptExprRepCommaExpr implements IOptExprRepCommaExpr {
         IExpr expression;
         IOptExprRepCommaExpr optExprRepCommaExpr;
-    }
-    static class OptExprRepCommaExprEpsilon implements IOptExprRepCommaExpr {}
 
-    interface IMonadicOpr {}
-    static class NotMonadicOpr implements IMonadicOpr {}
-    static class AddMonadicOpr implements IMonadicOpr {}
+        @Override
+        public List<AbsSyn.IExpression> toAbsSyn() {
+            List<AbsSyn.IExpression> list = new LinkedList<>();
+            list.add(expression.toAbsSyn());
+            List<AbsSyn.IExpression> next = optExprRepCommaExpr.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class OptExprRepCommaExprEpsilon implements IOptExprRepCommaExpr {
+        @Override
+        public List<AbsSyn.IExpression> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IMonadicOpr {
+        public AbsSyn.IMonadicOperator toAbsSyn();
+    }
+    static class NotMonadicOpr implements IMonadicOpr {
+        @Override
+        public AbsSyn.IMonadicOperator toAbsSyn() {
+            return new AbsSyn.NotMonadicOperator();
+        }
+    }
+    static class PosMonadicOpr implements IMonadicOpr {
+        @Override
+        public AbsSyn.IMonadicOperator toAbsSyn() {
+            return new AbsSyn.PosMonadicOperator();
+        }
+    }
 
     interface IOptInitOrExpressionListOrRecordAccess {}
     static class Init implements IOptInitOrExpressionListOrRecordAccess {}
-    interface IExprList extends IOptInitOrExpressionListOrRecordAccess {}
+    interface IExprList extends IOptInitOrExpressionListOrRecordAccess {
+        public List<AbsSyn.IExpression> toAbsSyn();
+    }
     static class ExprList implements IExprList {
         IOptExprRepCommaExpr optExprRepCommaExpr;
+
+        @Override
+        public List<AbsSyn.IExpression> toAbsSyn() {
+            return optExprRepCommaExpr.toAbsSyn();
+        }
     }
     interface IRecordAccess extends IOptInitOrExpressionListOrRecordAccess {}
     static class RecordAccess implements IRecordAccess {
@@ -249,77 +585,220 @@ public class ConcSyn {
     }
     static class RepBoolOprTerm1Epsilon implements IRepBoolOprTerm1 {}
 
-    interface IExpr {}
+    interface IExpr {
+        public AbsSyn.IExpression toAbsSyn();
+    }
     static class Expr implements IExpr {
         ITerm1 term1;
         IRepBoolOprTerm1 repBoolOprTerm1;
     }
 
-    interface IOptElseCpsCmd {}
+    interface IOptElseCpsCmd {
+        public List<AbsSyn.ICommand> toAbsSyn();
+    }
     static class OptElseCpsCmd implements IOptElseCpsCmd {
         ICpsCmd cpsCmd;
-    }
-    static class OptElseCpsCmdEpsilon implements IOptElseCpsCmd {}
 
-    interface IRepCommaIdents {}
+        @Override
+        public List<AbsSyn.ICommand> toAbsSyn() {
+            return cpsCmd.toAbsSyn();
+        }
+    }
+    static class OptElseCpsCmdEpsilon implements IOptElseCpsCmd {
+        @Override
+        public List<AbsSyn.ICommand> toAbsSyn() {
+            return null;
+        }
+    }
+
+    interface IRepCommaIdents {
+        public List<String> toAbsSyn();
+    }
     static class RepCommaIdents implements IRepCommaIdents {
         Identifier identifier;
         IRepCommaIdents repCommaIdents;
-    }
-    static class RepCommaIdentsEpsilon implements IRepCommaIdents {}
 
-    interface IOptGlobInits {}
+        @Override
+        public List<String> toAbsSyn() {
+            List<String> list = new LinkedList<>();
+            list.add(identifier.ident);
+            List<String> next = repCommaIdents.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class RepCommaIdentsEpsilon implements IRepCommaIdents {
+        @Override
+        public List<String> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface IOptGlobInits {
+        public List<String> toAbsSyn();
+    }
     static class OptGlobInits implements IOptGlobInits {
         Identifier identifier;
         IRepCommaIdents repCommaIdents;
-    }
-    static class OptGlobInitsEpsilon implements IOptGlobInits {}
 
-    interface ICmd {}
-    static class SkipCmd implements ICmd {}
-    interface IAssignmentCmd extends ICmd {}
+        @Override
+        public List<String> toAbsSyn() {
+            List<String> list = new LinkedList<>();
+            list.add(identifier.ident);
+            List<String> next = repCommaIdents.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class OptGlobInitsEpsilon implements IOptGlobInits {
+        @Override
+        public List<String> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    interface ICmd {
+        public AbsSyn.ICommand toAbsSyn();
+    }
+    static class SkipCmd implements ICmd {
+        @Override
+        public AbsSyn.ISkipCommand toAbsSyn() {
+            return new AbsSyn.SkipCommand();
+        }
+    }
+    interface IAssignmentCmd extends ICmd {
+        @Override
+        public AbsSyn.IAssignmentCommand toAbsSyn();
+    }
     static class AssignmentCmd implements IAssignmentCmd {
         IExpr expr1;
         IExpr expr2;
+
+        @Override
+        public AbsSyn.IAssignmentCommand toAbsSyn() {
+            return new AbsSyn.AssignmentCommand(
+                    expr1.toAbsSyn(),
+                    expr2.toAbsSyn()
+            );
+        }
     }
-    interface IIfCmd extends ICmd {}
+    interface IIfCmd extends ICmd {
+        @Override
+        public AbsSyn.IIfCommand toAbsSyn();
+    }
     static class IfCmd implements IIfCmd {
         IExpr conditionExpr;
         ICpsCmd cpsCmd;
         IOptElseCpsCmd optElseCpsCmd;
+
+        @Override
+        public AbsSyn.IIfCommand toAbsSyn() {
+            return new AbsSyn.IfCommand(
+                    conditionExpr.toAbsSyn(),
+                    cpsCmd.toAbsSyn(),
+                    optElseCpsCmd.toAbsSyn()
+            );
+        }
     }
-    interface IWhileCmd extends ICmd {}
+    interface IWhileCmd extends ICmd {
+        @Override
+        public AbsSyn.IWhileCommand toAbsSyn();
+    }
     static class WhileCmd implements IWhileCmd {
         IExpr conditionExpr;
         ICpsCmd cpsCmd;
+
+        @Override
+        public AbsSyn.IWhileCommand toAbsSyn() {
+            return new AbsSyn.WhileCommand(
+                    conditionExpr.toAbsSyn(),
+                    cpsCmd.toAbsSyn()
+            );
+        }
     }
-    interface ICallCmd extends ICmd {}
+    interface ICallCmd extends ICmd {
+        @Override
+        public AbsSyn.ICallCommand toAbsSyn();
+    }
     static class CallCmd implements ICallCmd {
         Identifier identifier;
         IExprList exprList;
         IOptGlobInits optGlobInits;
+
+        @Override
+        public AbsSyn.ICallCommand toAbsSyn() {
+            return new AbsSyn.CallCommand(
+                    identifier.ident,
+                    exprList.toAbsSyn(),
+                    optGlobInits.toAbsSyn()
+            );
+        }
     }
-    interface IDebugInCmd extends ICmd {}
+    interface IDebugInCmd extends ICmd {
+        @Override
+        public AbsSyn.IDebugInCommand toAbsSyn();
+    }
     static class DebugInCmd implements IDebugInCmd {
         IExpr expr;
+
+        @Override
+        public AbsSyn.IDebugInCommand toAbsSyn() {
+            return new AbsSyn.DebugInCommand(expr.toAbsSyn());
+        }
     }
-    interface IDebugOutCmd extends ICmd {}
+    interface IDebugOutCmd extends ICmd {
+        @Override
+        public AbsSyn.IDebugOutCommand toAbsSyn();
+    }
     static class DebugOutCmd implements IDebugOutCmd {
         IExpr expr;
+
+        @Override
+        public AbsSyn.IDebugOutCommand toAbsSyn() {
+            return new AbsSyn.DebugOutCommand(expr.toAbsSyn());
+        }
     }
 
-    interface ICpsCmd {}
+    interface ICpsCmd {
+        List<AbsSyn.ICommand> toAbsSyn();
+    }
     static class CpsCmd implements ICpsCmd {
         ICmd cmd;
         ICpsCmd cpsCmd;
-    }
-    static class CpsCmdEpsilon implements ICpsCmd {}
 
-    public interface IProgram {}
+        @Override
+        public List<AbsSyn.ICommand> toAbsSyn() {
+            List<AbsSyn.ICommand> list = new LinkedList<>();
+            list.add(cmd.toAbsSyn());
+            List<AbsSyn.ICommand> next = cpsCmd.toAbsSyn();
+            list.addAll(next);
+            return list;
+        }
+    }
+    static class CpsCmdEpsilon implements ICpsCmd {
+        @Override
+        public List<AbsSyn.ICommand> toAbsSyn() {
+            return new LinkedList<>();
+        }
+    }
+
+    public interface IProgram {
+        public AbsSyn.IProgram toAbsSyn();
+    }
     static class Program implements IProgram {
         public Identifier identifier;
         public IProgParamList progParamList;
         public IOptGlobalCpsDecl optGlobalCpsDecl;
         public ICpsCmd cpsCmd;
+
+        @Override
+        public AbsSyn.IProgram toAbsSyn() {
+            return new AbsSyn.Program(
+                    identifier.ident,
+                    progParamList.toAbsSyn(),
+                    optGlobalCpsDecl.toAbsSyn(),
+                    cpsCmd.toAbsSyn()
+            );
+        }
     }
 }
