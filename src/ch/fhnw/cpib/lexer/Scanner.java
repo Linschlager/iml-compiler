@@ -20,7 +20,7 @@ public class Scanner implements IScanner {
 
         int state = 0;
         StringBuilder lexAccu = null; // for identifiers and comments
-        long numAccu = 0;
+        StringBuilder numAccu = new StringBuilder();
 
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
@@ -50,7 +50,7 @@ public class Scanner implements IScanner {
                         lexAccu.append(c);
                         state = 1;
                     } else if (Character.isDigit(c)) {
-                        numAccu = Character.digit(c, 10);
+                        numAccu = new StringBuilder(Character.toString(c));
                         state = 2;
                     } else if (c == '/') {
                         state = 3;
@@ -80,13 +80,14 @@ public class Scanner implements IScanner {
                     break;
                 case 2:
                     if (Character.isDigit(c)) {
-                        numAccu = numAccu * 10 + Character.digit(c, 10);
-                        if (numAccu > Integer.MAX_VALUE) throw new LexicalError("IntegerLiteral too large at position " + i + "!");
+                        numAccu.append(c);
+
+                        // if (numAccu > Integer.MAX_VALUE) throw new LexicalError("IntegerLiteral too large at position " + i + "!");
                     } else {
                         state = 0;
                         i--;
-                        tokenList.add(new Literal((int) numAccu));
-                        numAccu = 0;
+                        tokenList.add(new Literal(numAccu.toString()));
+                        numAccu = new StringBuilder();
                     }
                     break;
                 case 3:

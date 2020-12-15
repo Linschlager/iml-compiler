@@ -1,6 +1,6 @@
 package ch.fhnw.cpib.parser;
 
-import ch.fhnw.cpib.lexer.tokens.Type;
+import ch.fhnw.cpib.lexer.tokens.*;
 
 import java.util.List;
 
@@ -145,6 +145,113 @@ public class AbsSyn {
     static class PosMonadicOperator implements IMonadicOperator {}
 
     interface IExpression {}
+    interface ILiteralExpression extends IExpression {}
+    interface IBoolLiteralExpression extends ILiteralExpression {}
+    static class BoolLiteralExpression implements IBoolLiteralExpression {
+        boolean value;
+
+        public BoolLiteralExpression(boolean value) {
+            this.value = value;
+        }
+    }
+    interface IIntLiteralExpression extends ILiteralExpression {}
+    static class IntLiteralExpression implements IIntLiteralExpression {
+        String value; // To allow any length of number
+
+        public IntLiteralExpression(String value) {
+            this.value = value;
+        }
+    }
+    interface IStoreExpression extends IExpression {}
+    static class StoreExpression implements IStoreExpression {
+        String name;
+        boolean init;
+
+        public StoreExpression(String name, boolean init) {
+            this.name = name;
+            this.init = init;
+        }
+    }
+    interface IFunctionCallExpression extends IExpression {}
+    static class FunctionCallExpression implements IFunctionCallExpression {
+        String name;
+        List<IExpression> arguments;
+
+        public FunctionCallExpression(String name, List<IExpression> arguments) {
+            this.name = name;
+            this.arguments = arguments;
+        }
+    }
+    interface IMonadicExpression extends IExpression {}
+    static class MonadicExpression implements IMonadicExpression {
+        IMonadicOperator operator;
+        IExpression expression;
+
+        public MonadicExpression(IMonadicOperator operator, IExpression expression) {
+            this.operator = operator;
+            this.expression = expression;
+        }
+    }
+    interface IDyadicExpression extends IExpression {}
+    interface IMultiplicationDyadicExpression extends IDyadicExpression {}
+    static class MultiplicationDyadicExpression implements IMultiplicationDyadicExpression {
+        MultOpr.Attr operator;
+        IExpression l;
+        IExpression r;
+
+        public MultiplicationDyadicExpression(MultOpr.Attr operator, IExpression l, IExpression r) {
+            this.operator = operator;
+            this.l = l;
+            this.r = r;
+        }
+    }
+    interface IAdditionDyadicExpression extends IDyadicExpression {}
+    static class AdditionDyadicExpression implements IAdditionDyadicExpression {
+        AddOpr.Attr operator;
+        IExpression l;
+        IExpression r;
+
+        public AdditionDyadicExpression(AddOpr.Attr operator, IExpression l, IExpression r) {
+            this.operator = operator;
+            this.l = l;
+            this.r = r;
+        }
+    }
+    interface IRelativeDyadicExpression extends IDyadicExpression {}
+    static class RelativeDyadicExpression implements IRelativeDyadicExpression {
+        RelOpr.Attr operator;
+        IExpression l;
+        IExpression r;
+
+        public RelativeDyadicExpression(RelOpr.Attr operator, IExpression l, IExpression r) {
+            this.operator = operator;
+            this.l = l;
+            this.r = r;
+        }
+    }
+    interface IBoolDyadicExpression extends IDyadicExpression {}
+    static class BoolDyadicExpression implements IBoolDyadicExpression {
+        BoolOpr.Attr operator;
+        IExpression l;
+        IExpression r;
+
+        public BoolDyadicExpression(BoolOpr.Attr operator, IExpression l, IExpression r) {
+            this.operator = operator;
+            this.l = l;
+            this.r = r;
+        }
+    }
+
+    interface IRecordAccessExpression extends IExpression {}
+    static class RecordAccessExpression implements IRecordAccessExpression {
+        String recordName;
+        List<String> fieldNames;
+
+        public RecordAccessExpression(String recordName, List<String> fieldNames) {
+            this.recordName = recordName;
+            this.fieldNames = fieldNames;
+        }
+    }
 
     interface ICommand {}
     interface ISkipCommand extends ICommand {}

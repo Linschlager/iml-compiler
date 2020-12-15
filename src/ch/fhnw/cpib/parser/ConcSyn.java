@@ -4,6 +4,7 @@ import ch.fhnw.cpib.lexer.tokens.*;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Function;
 
 public class ConcSyn {
     interface IType {
@@ -495,9 +496,29 @@ public class ConcSyn {
         }
     }
 
-    interface IOptInitOrExpressionListOrRecordAccess {}
-    static class Init implements IOptInitOrExpressionListOrRecordAccess {}
-    interface IExprList extends IOptInitOrExpressionListOrRecordAccess {
+    interface IOptInitOrExpressionListOrRecordAccess {
+        public AbsSyn.IExpression toAbsSyn(String name);
+    }
+    interface IInit extends IOptInitOrExpressionListOrRecordAccess {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(String name);
+    }
+    static class Init implements IInit {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(String name) {
+            return new AbsSyn.StoreExpression(name, true);
+        }
+    }
+    interface IExprListFactor extends IOptInitOrExpressionListOrRecordAccess {}
+    static class ExprListFactor implements IExprListFactor {
+        IExprList exprList;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn(String name) {
+            return new AbsSyn.FunctionCallExpression(name, exprList.toAbsSyn());
+        }
+    }
+    interface IExprList {
         public List<AbsSyn.IExpression> toAbsSyn();
     }
     static class ExprList implements IExprList {
@@ -508,82 +529,243 @@ public class ConcSyn {
             return optExprRepCommaExpr.toAbsSyn();
         }
     }
-    interface IRecordAccess extends IOptInitOrExpressionListOrRecordAccess {}
+    interface IRecordAccess extends IOptInitOrExpressionListOrRecordAccess {
+        public AbsSyn.IRecordAccessExpression toAbsSyn(String recordName);
+    }
     static class RecordAccess implements IRecordAccess {
         Identifier identifier;
         IRecordAccess optRecordAccess;
-    }
-    static class RecordAccessEpsilon implements IRecordAccess {}
-    static class OptInitOrExpressionListOrRecordAccessEpsilon implements IOptInitOrExpressionListOrRecordAccess {}
 
-    interface IFactor {}
+        @Override
+        public AbsSyn.IRecordAccessExpression toAbsSyn(String name) {
+            List<String> list = new LinkedList<>();
+            list.add(identifier.ident);
+
+            List<String> next = ((AbsSyn.RecordAccessExpression)(optRecordAccess.toAbsSyn(name))).fieldNames;
+            list.addAll(next);
+            return new AbsSyn.RecordAccessExpression(name, list);
+        }
+    }
+    static class RecordAccessEpsilon implements IRecordAccess {
+        @Override
+        public AbsSyn.IRecordAccessExpression toAbsSyn(String recordName) {
+            return new AbsSyn.RecordAccessExpression(recordName, new LinkedList<>());
+        }
+    }
+    static class OptInitOrExpressionListOrRecordAccessEpsilon implements IOptInitOrExpressionListOrRecordAccess {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(String name) {
+            return null;
+        }
+    }
+
+    interface IFactor {
+        public AbsSyn.IExpression toAbsSyn();
+    }
     interface ILiteralFactor extends IFactor {}
     static class LiteralFactor implements ILiteralFactor {
         Literal literal;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return switch (literal.attr) {
+                case BOOL -> new AbsSyn.BoolLiteralExpression(literal.boolValue);
+                case NUMBER -> new AbsSyn.IntLiteralExpression(literal.numberValue);
+            };
+        }
     }
     interface IIdentFactor extends IFactor {}
     static class IdentFactor implements IIdentFactor {
         Identifier identifier;
         IOptInitOrExpressionListOrRecordAccess optInitOrExpressionListOrRecordAccess;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return optInitOrExpressionListOrRecordAccess.toAbsSyn(identifier.ident);
+        }
     }
     interface IMonadicFactor extends IFactor {}
     static class MonadicFactor implements IMonadicFactor {
         IMonadicOpr monadicOpr;
         IFactor factor;
+
+        @Override
+        public AbsSyn.IMonadicExpression toAbsSyn() {
+            return null;
+        }
     }
     interface IExpressionFactor extends IFactor {}
     static class ExpressionFactor implements IExpressionFactor {
         IExpr expression;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return expression.toAbsSyn();
+        }
     }
 
-    interface IRepMultOprFactor {}
+    interface IRepMultOprFactor {
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression factor);
+    }
     static class RepMultOprFactor implements IRepMultOprFactor {
         MultOpr multOpr;
         IFactor factor;
         IRepMultOprFactor repMultOprFactor;
-    }
-    static class RepMultOprFactorEpsilon implements IRepMultOprFactor {}
 
-    interface ITerm3 {}
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            if (repMultOprFactor.toAbsSyn(factor.toAbsSyn()) == null) {
+                return new AbsSyn.MultiplicationDyadicExpression(
+                        multOpr.attr,
+                        lastFactor,
+                        factor.toAbsSyn()
+                );
+            } else {
+                return new AbsSyn.MultiplicationDyadicExpression(
+                        multOpr.attr,
+                        lastFactor,
+                        repMultOprFactor.toAbsSyn(factor.toAbsSyn())
+                );
+            }
+        }
+    }
+    static class RepMultOprFactorEpsilon implements IRepMultOprFactor {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression factor) {
+            return null;
+        }
+    }
+
+    interface ITerm3 {
+        public AbsSyn.IExpression toAbsSyn();
+    }
     static class Term3 implements ITerm3 {
         IFactor factor;
         IRepMultOprFactor repMultOprFactor;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            if (repMultOprFactor == null) {
+                return factor.toAbsSyn();
+            } else {
+                return repMultOprFactor.toAbsSyn(factor.toAbsSyn());
+            }
+        }
     }
 
-    interface IRepAddOprTerm3 {}
+    interface IRepAddOprTerm3 {
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+    }
     static class RepAddOprTerm3 implements IRepAddOprTerm3 {
         AddOpr addOpr;
         ITerm3 term3;
         IRepAddOprTerm3 repAddOprTerm3;
-    }
-    static class RepAddOprTerm3Epsilon implements IRepAddOprTerm3 {}
 
-    interface ITerm2 {}
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            if (repAddOprTerm3.toAbsSyn(term3.toAbsSyn()) == null) {
+                return new AbsSyn.AdditionDyadicExpression(
+                        addOpr.attr,
+                        lastFactor,
+                        term3.toAbsSyn()
+                );
+            } else {
+                return new AbsSyn.AdditionDyadicExpression(
+                        addOpr.attr,
+                        lastFactor,
+                        repAddOprTerm3.toAbsSyn(term3.toAbsSyn())
+                );
+            }
+        }
+    }
+    static class RepAddOprTerm3Epsilon implements IRepAddOprTerm3 {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            return lastFactor;
+        }
+    }
+
+    interface ITerm2 {
+        public AbsSyn.IExpression toAbsSyn();
+    }
     static class Term2 implements ITerm2 {
         ITerm3 term3;
         IRepAddOprTerm3 repAddOprTerm3;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return repAddOprTerm3.toAbsSyn(term3.toAbsSyn());
+        }
     }
 
-    interface IOptRelOprTerm2 {}
+    interface IOptRelOprTerm2 {
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+    }
     static class OptRelOprTerm2 implements IOptRelOprTerm2 {
         RelOpr relOpr;
         ITerm2 term2;
-    }
-    static class OptRelOprTerm2Epsilon implements IOptRelOprTerm2 {}
 
-    interface ITerm1 {}
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            return new AbsSyn.RelativeDyadicExpression(
+                    relOpr.attr,
+                    lastFactor,
+                    term2.toAbsSyn()
+            );
+        }
+    }
+    static class OptRelOprTerm2Epsilon implements IOptRelOprTerm2 {
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            return lastFactor;
+        }
+    }
+
+    interface ITerm1 {
+        public AbsSyn.IExpression toAbsSyn();
+    }
     static class Term1 implements ITerm1 {
         ITerm2 term2;
         IOptRelOprTerm2 optRelOprTerm2;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return optRelOprTerm2.toAbsSyn(term2.toAbsSyn());
+        }
     }
 
-    interface IRepBoolOprTerm1 {}
+    interface IRepBoolOprTerm1 {
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+    }
     static class RepBoolOprTerm1 implements IRepBoolOprTerm1 {
         BoolOpr boolOpr;
         ITerm1 term1;
         IRepBoolOprTerm1 repBoolOprTerm1;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            if (repBoolOprTerm1.toAbsSyn(term1.toAbsSyn()) == null) {
+                return new AbsSyn.BoolDyadicExpression(
+                        boolOpr.attr,
+                        lastFactor,
+                        term1.toAbsSyn()
+                );
+            } else {
+                return new AbsSyn.BoolDyadicExpression(
+                        boolOpr.attr,
+                        lastFactor,
+                        repBoolOprTerm1.toAbsSyn(term1.toAbsSyn())
+                );
+            }
+        }
     }
-    static class RepBoolOprTerm1Epsilon implements IRepBoolOprTerm1 {}
+    static class RepBoolOprTerm1Epsilon implements IRepBoolOprTerm1 {
+        @Override
+        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
+            return lastFactor;
+        }
+    }
 
     interface IExpr {
         public AbsSyn.IExpression toAbsSyn();
@@ -591,6 +773,11 @@ public class ConcSyn {
     static class Expr implements IExpr {
         ITerm1 term1;
         IRepBoolOprTerm1 repBoolOprTerm1;
+
+        @Override
+        public AbsSyn.IExpression toAbsSyn() {
+            return repBoolOprTerm1.toAbsSyn(term1.toAbsSyn());
+        }
     }
 
     interface IOptElseCpsCmd {

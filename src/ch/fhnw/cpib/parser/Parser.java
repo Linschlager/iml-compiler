@@ -518,6 +518,18 @@ public class Parser implements IParser {
         } else throw new GrammarError("cmd");
     }
 
+    private ConcSyn.IExprListFactor exprListFactor() throws GrammarError {
+        /*
+          terminal LPAREN
+            LPAREN <optExprRepCommaExpr> RPAREN
+         */
+        if (token.terminal == Terminal.LPAREN) {
+            ConcSyn.ExprListFactor factor = new ConcSyn.ExprListFactor();
+            factor.exprList = exprList();
+            return factor;
+        } else throw new GrammarError("exprList");
+    }
+
     private ConcSyn.IExprList exprList() throws GrammarError {
         /*
           terminal LPAREN
@@ -1187,7 +1199,7 @@ public class Parser implements IParser {
             consume(Terminal.INIT);
             return new ConcSyn.Init();
         } else if (token.terminal == Terminal.LPAREN) {
-            return exprList();
+            return exprListFactor();
         } else if (token.terminal == Terminal.ACCESSOPR) {
             return recordAccess();
         } else if (List.of(Terminal.COMMA,
