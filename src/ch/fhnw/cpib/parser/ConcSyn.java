@@ -4,7 +4,7 @@ import ch.fhnw.cpib.lexer.tokens.*;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Objects;
 
 public class ConcSyn {
     interface IType {
@@ -171,9 +171,7 @@ public class ConcSyn {
     }
     static class ParamEpsilon implements IParam {
         @Override
-        public AbsSyn.IParameter toAbsSyn() {
-            return null;
-        }
+        public AbsSyn.IParameter toAbsSyn() {return null;}
     }
 
     interface IOptParamRepCommaParam {
@@ -266,7 +264,7 @@ public class ConcSyn {
     static class OptGlobalGlobImpsEpsilon implements IOptGlobalGlobImps {
         @Override
         public List<AbsSyn.IGlobalImport> toAbsSyn() {
-            return null;
+            return new LinkedList<>();
         }
     }
 
@@ -307,7 +305,7 @@ public class ConcSyn {
     static class OptLocalCpsStoDeclEpsilon implements IOptLocalCpsStoDecl {
         @Override
         public List<AbsSyn.IStorageDeclaration> toAbsSyn() {
-            return null;
+            return new LinkedList<>();
         }
     }
 
@@ -453,7 +451,7 @@ public class ConcSyn {
     static class OptGlobalCpsDeclEpsilon implements IOptGlobalCpsDecl {
         @Override
         public List<AbsSyn.IDeclaration> toAbsSyn() {
-            return null;
+            return new LinkedList<>();
         }
     }
 
@@ -555,7 +553,7 @@ public class ConcSyn {
     static class OptInitOrExpressionListOrRecordAccessEpsilon implements IOptInitOrExpressionListOrRecordAccess {
         @Override
         public AbsSyn.IExpression toAbsSyn(String name) {
-            return null;
+            return new AbsSyn.StoreExpression(name, false);
         }
     }
 
@@ -591,7 +589,10 @@ public class ConcSyn {
 
         @Override
         public AbsSyn.IMonadicExpression toAbsSyn() {
-            return null;
+            return new AbsSyn.MonadicExpression(
+                    monadicOpr.toAbsSyn(),
+                    factor.toAbsSyn()
+            );
         }
     }
     interface IExpressionFactor extends IFactor {}
@@ -614,7 +615,7 @@ public class ConcSyn {
 
         @Override
         public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
-            if (repMultOprFactor.toAbsSyn(factor.toAbsSyn()) == null) {
+            if (Objects.equals(repMultOprFactor.toAbsSyn(factor.toAbsSyn()), factor.toAbsSyn())) {
                 return new AbsSyn.MultiplicationDyadicExpression(
                         multOpr.attr,
                         lastFactor,
@@ -632,7 +633,7 @@ public class ConcSyn {
     static class RepMultOprFactorEpsilon implements IRepMultOprFactor {
         @Override
         public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression factor) {
-            return null;
+            return factor;
         }
     }
 
@@ -645,7 +646,7 @@ public class ConcSyn {
 
         @Override
         public AbsSyn.IExpression toAbsSyn() {
-            if (repMultOprFactor == null) {
+            if (Objects.equals(repMultOprFactor.toAbsSyn(factor.toAbsSyn()), factor.toAbsSyn())) {
                 return factor.toAbsSyn();
             } else {
                 return repMultOprFactor.toAbsSyn(factor.toAbsSyn());
@@ -663,7 +664,7 @@ public class ConcSyn {
 
         @Override
         public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
-            if (repAddOprTerm3.toAbsSyn(term3.toAbsSyn()) == null) {
+            if (Objects.equals(repAddOprTerm3.toAbsSyn(term3.toAbsSyn()), term3.toAbsSyn())) {
                 return new AbsSyn.AdditionDyadicExpression(
                         addOpr.attr,
                         lastFactor,
@@ -745,7 +746,7 @@ public class ConcSyn {
 
         @Override
         public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor) {
-            if (repBoolOprTerm1.toAbsSyn(term1.toAbsSyn()) == null) {
+            if (repBoolOprTerm1.toAbsSyn(term1.toAbsSyn()) == term1.toAbsSyn()) {
                 return new AbsSyn.BoolDyadicExpression(
                         boolOpr.attr,
                         lastFactor,
@@ -794,7 +795,7 @@ public class ConcSyn {
     static class OptElseCpsCmdEpsilon implements IOptElseCpsCmd {
         @Override
         public List<AbsSyn.ICommand> toAbsSyn() {
-            return null;
+            return new LinkedList<>();
         }
     }
 

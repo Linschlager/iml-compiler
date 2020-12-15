@@ -317,7 +317,7 @@ public class AbsSyn {
         }
     }
 
-    interface IProgram {}
+    public interface IProgram {}
     static class Program implements IProgram {
         String name;
         List<IProgramParameter> programParameters;
