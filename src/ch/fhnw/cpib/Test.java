@@ -12,8 +12,22 @@ import java.util.Objects;
 
 public class Test {
 
-    private final static String assocInput1 = "program a() global x:int32 do debugin x init; debugout (x - x) - x endprogram ";
-    private final static String assocInput2 = "program a() global x:int32 do debugin x init; debugout x1 - x2 - x3 endprogram ";
+    private final static String assocInput = "program Assoc()\n" +
+            "global x:int32\n" +
+            "do\n" +
+            "  debugin x init ;\n" +
+            "  debugout x - (x - x) ;\n" +
+            "  debugout (x - x) - x ; \n" +
+            "  debugout x - x - x ; // should be same as line above\n" +
+            "\n" +
+            "  debugout x;\n" +
+            "  debugout ((((x))));\n" +
+            "\n" +
+            "\n" +
+            "  debugout x divE (2 divE 2) ;\n" +
+            "  debugout (x divE 2) divE 2 ;\n" +
+            "  debugout x divE 2 divE 2 // should be same as above\n" +
+            "endprogram\n";
 
     private static AbsSyn.IProgram compileToAST (String input) {
         try {
@@ -27,10 +41,24 @@ public class Test {
         }
     }
 
-    public static void test() {
-        var input1 = compileToAST(assocInput1);
-        var input2 = compileToAST(assocInput2);
-
-        assert Objects.deepEquals(input1, input2);
+    public static void test() throws Exception {
+        AbsSyn.Program input = (AbsSyn.Program) compileToAST(assocInput);
+        assert input != null;
+        { // Check x - x - x => (x - x) - x
+            AbsSyn.ICommand command = input.commands.get(3);
+            var doc = (AbsSyn.DebugOutCommand) command;
+            var ade = (AbsSyn.AdditionDyadicExpression) doc.expression;
+            if (!(ade.l instanceof AbsSyn.AdditionDyadicExpression)) {
+                throw new Exception("Assertion not fixed correctly");
+            }
+        }
+        { // Check x divE 2 divE 2 => (x divE 2) divE 2
+            AbsSyn.ICommand command = input.commands.get(8);
+            var doc = (AbsSyn.DebugOutCommand) command;
+            var ade = (AbsSyn.MultiplicationDyadicExpression) doc.expression;
+            if (!(ade.l instanceof AbsSyn.MultiplicationDyadicExpression)) {
+                throw new Exception("Assertion not fixed correctly");
+            }
+        }
     }
 }

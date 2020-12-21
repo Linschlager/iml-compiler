@@ -622,11 +622,12 @@ public class ConcSyn {
                         factor.toAbsSyn()
                 );
             } else {
-                return new AbsSyn.MultiplicationDyadicExpression(
+                var left = new AbsSyn.MultiplicationDyadicExpression(
                         multOpr.attr,
                         lastFactor,
-                        repMultOprFactor.toAbsSyn(factor.toAbsSyn())
+                        factor.toAbsSyn()
                 );
+                return repMultOprFactor.toAbsSyn(left);
             }
         }
     }
@@ -671,11 +672,12 @@ public class ConcSyn {
                         term3.toAbsSyn()
                 );
             } else {
-                return new AbsSyn.AdditionDyadicExpression(
+                var left = new AbsSyn.AdditionDyadicExpression(
                         addOpr.attr,
                         lastFactor,
-                        repAddOprTerm3.toAbsSyn(term3.toAbsSyn())
+                        term3.toAbsSyn()
                 );
+                return repAddOprTerm3.toAbsSyn(left);
             }
         }
     }
@@ -753,11 +755,12 @@ public class ConcSyn {
                         term1.toAbsSyn()
                 );
             } else {
-                return new AbsSyn.BoolDyadicExpression(
+                var left = new AbsSyn.BoolDyadicExpression(
                         boolOpr.attr,
                         lastFactor,
-                        repBoolOprTerm1.toAbsSyn(term1.toAbsSyn())
+                        term1.toAbsSyn()
                 );
+                return repBoolOprTerm1.toAbsSyn(left);
             }
         }
     }

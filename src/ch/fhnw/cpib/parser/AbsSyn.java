@@ -5,49 +5,49 @@ import ch.fhnw.cpib.lexer.tokens.*;
 import java.util.List;
 
 public class AbsSyn {
-    interface IType {}
-    static class TraditionalType implements IType {
-        Type type;
+    public interface IType {}
+    public static class TraditionalType implements IType {
+        public Type type;
         public TraditionalType(Type type) {
             this.type = type;
         }
     }
-    static class RecordType implements IType {
-        String name;
+    public static class RecordType implements IType {
+        public String name;
 
         public RecordType(String name) {
             this.name = name;
         }
     }
 
-    interface IFlowMode {}
-    static class InFlowMode implements IFlowMode {}
-    static class InOutFlowMode implements IFlowMode {}
-    static class OutFlowMode implements IFlowMode {}
+    public interface IFlowMode {}
+    public static class InFlowMode implements IFlowMode {}
+    public static class InOutFlowMode implements IFlowMode {}
+    public static class OutFlowMode implements IFlowMode {}
 
-    interface IMechMode {}
-    static class CopyMechMode implements IMechMode {}
-    static class RefMechMode implements IMechMode {}
+    public interface IMechMode {}
+    public static class CopyMechMode implements IMechMode {}
+    public static class RefMechMode implements IMechMode {}
 
-    interface IChangeMode {}
-    static class VarChangeMode implements IChangeMode {}
-    static class ConstChangeMode implements IChangeMode {}
+    public interface IChangeMode {}
+    public static class VarChangeMode implements IChangeMode {}
+    public static class ConstChangeMode implements IChangeMode {}
 
-    interface ITypedIdentifier {}
-    static class TypedIdentifier implements ITypedIdentifier {
-        String name;
-        IType type;
+    public interface ITypedIdentifier {}
+    public static class TypedIdentifier implements ITypedIdentifier {
+        public String name;
+        public IType type;
         public TypedIdentifier (String name, IType type) {
             this.name = name;
             this.type = type;
         }
     }
 
-    interface IProgramParameter {}
-    static class ProgramParameter implements IProgramParameter {
-        IFlowMode flowMode;
-        IChangeMode changeMode;
-        ITypedIdentifier typedIdentifier;
+    public interface IProgramParameter {}
+    public static class ProgramParameter implements IProgramParameter {
+        public IFlowMode flowMode;
+        public IChangeMode changeMode;
+        public ITypedIdentifier typedIdentifier;
 
         public ProgramParameter(IFlowMode flowMode, IChangeMode changeMode, ITypedIdentifier typedIdentifier) {
             this.flowMode = flowMode;
@@ -56,12 +56,12 @@ public class AbsSyn {
         }
     }
 
-    interface IParameter {}
-    static class Parameter implements IParameter {
-        IFlowMode flowMode;
-        IMechMode mechMode;
-        IChangeMode changeMode;
-        ITypedIdentifier typedIdentifier;
+    public interface IParameter {}
+    public static class Parameter implements IParameter {
+        public IFlowMode flowMode;
+        public IMechMode mechMode;
+        public IChangeMode changeMode;
+        public ITypedIdentifier typedIdentifier;
 
         public Parameter(IFlowMode flowMode, IMechMode mechMode, IChangeMode changeMode, ITypedIdentifier typedIdentifier) {
             this.flowMode = flowMode;
@@ -71,11 +71,11 @@ public class AbsSyn {
         }
     }
 
-    interface IGlobalImport {}
-    static class GlobalImport implements IGlobalImport {
-        IFlowMode flowMode;
-        IChangeMode changeMode;
-        String name;
+    public interface IGlobalImport {}
+    public static class GlobalImport implements IGlobalImport {
+        public IFlowMode flowMode;
+        public IChangeMode changeMode;
+        public String name;
 
         public GlobalImport(IFlowMode flowMode, IChangeMode changeMode, String name) {
             this.flowMode = flowMode;
@@ -84,25 +84,25 @@ public class AbsSyn {
         }
     }
 
-    interface IDeclaration {}
-    interface IStorageDeclaration extends IDeclaration {}
-    static class StorageDeclaration implements IStorageDeclaration {
-        IChangeMode changeMode;
-        ITypedIdentifier typedIdentifier;
+    public interface IDeclaration {}
+    public interface IStorageDeclaration extends IDeclaration {}
+    public static class StorageDeclaration implements IStorageDeclaration {
+        public IChangeMode changeMode;
+        public ITypedIdentifier typedIdentifier;
 
         public StorageDeclaration(IChangeMode changeMode, ITypedIdentifier typedIdentifier) {
             this.changeMode = changeMode;
             this.typedIdentifier = typedIdentifier;
         }
     }
-    interface IFunctionDeclaration extends IDeclaration {}
-    static class FunctionDeclaration implements IFunctionDeclaration {
-        String name;
-        List<IParameter> parameterList;
-        IStorageDeclaration storageDeclaration;
-        List<IGlobalImport> globalImports;
-        List<IStorageDeclaration> localImports;
-        List<ICommand> commands;
+    public interface IFunctionDeclaration extends IDeclaration {}
+    public static class FunctionDeclaration implements IFunctionDeclaration {
+        public String name;
+        public List<IParameter> parameterList;
+        public IStorageDeclaration storageDeclaration;
+        public List<IGlobalImport> globalImports;
+        public List<IStorageDeclaration> localImports;
+        public List<ICommand> commands;
 
         public FunctionDeclaration(String name, List<IParameter> parameterList, IStorageDeclaration storageDeclaration, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
             this.name = name;
@@ -113,13 +113,13 @@ public class AbsSyn {
             this.commands = commands;
         }
     }
-    interface IProcedureDeclaration extends IDeclaration {}
-    static class ProcedureDeclaration implements IProcedureDeclaration {
-        String name;
-        List<IParameter> parameters;
-        List<IGlobalImport> globalImports;
-        List<IStorageDeclaration> localImports;
-        List<ICommand> commands;
+    public interface IProcedureDeclaration extends IDeclaration {}
+    public static class ProcedureDeclaration implements IProcedureDeclaration {
+        public String name;
+        public List<IParameter> parameters;
+        public List<IGlobalImport> globalImports;
+        public List<IStorageDeclaration> localImports;
+        public List<ICommand> commands;
 
         public ProcedureDeclaration(String name, List<IParameter> parameters, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
             this.name = name;
@@ -129,10 +129,10 @@ public class AbsSyn {
             this.commands = commands;
         }
     }
-    interface IRecordShapeDeclaration extends IDeclaration {}
-    static class RecordShapeDeclaration implements IRecordShapeDeclaration {
-        String name;
-        List<ITypedIdentifier> fields;
+    public interface IRecordShapeDeclaration extends IDeclaration {}
+    public static class RecordShapeDeclaration implements IRecordShapeDeclaration {
+        public String name;
+        public List<ITypedIdentifier> fields;
 
         public RecordShapeDeclaration(String name, List<ITypedIdentifier> fields) {
             this.name = name;
@@ -140,64 +140,64 @@ public class AbsSyn {
         }
     }
 
-    interface IMonadicOperator {}
-    static class NotMonadicOperator implements IMonadicOperator {}
-    static class PosMonadicOperator implements IMonadicOperator {}
+    public interface IMonadicOperator {}
+    public static class NotMonadicOperator implements IMonadicOperator {}
+    public static class PosMonadicOperator implements IMonadicOperator {}
 
-    interface IExpression {}
-    interface ILiteralExpression extends IExpression {}
-    interface IBoolLiteralExpression extends ILiteralExpression {}
-    static class BoolLiteralExpression implements IBoolLiteralExpression {
-        boolean value;
+    public interface IExpression {}
+    public interface ILiteralExpression extends IExpression {}
+    public interface IBoolLiteralExpression extends ILiteralExpression {}
+    public static class BoolLiteralExpression implements IBoolLiteralExpression {
+        public boolean value;
 
         public BoolLiteralExpression(boolean value) {
             this.value = value;
         }
     }
-    interface IIntLiteralExpression extends ILiteralExpression {}
-    static class IntLiteralExpression implements IIntLiteralExpression {
-        String value; // To allow any length of number
+    public interface IIntLiteralExpression extends ILiteralExpression {}
+    public static class IntLiteralExpression implements IIntLiteralExpression {
+        public String value; // To allow any length of number
 
         public IntLiteralExpression(String value) {
             this.value = value;
         }
     }
-    interface IStoreExpression extends IExpression {}
-    static class StoreExpression implements IStoreExpression {
-        String name;
-        boolean init;
+    public interface IStoreExpression extends IExpression {}
+    public static class StoreExpression implements IStoreExpression {
+        public String name;
+        public boolean init;
 
         public StoreExpression(String name, boolean init) {
             this.name = name;
             this.init = init;
         }
     }
-    interface IFunctionCallExpression extends IExpression {}
-    static class FunctionCallExpression implements IFunctionCallExpression {
-        String name;
-        List<IExpression> arguments;
+    public interface IFunctionCallExpression extends IExpression {}
+    public static class FunctionCallExpression implements IFunctionCallExpression {
+        public String name;
+        public List<IExpression> arguments;
 
         public FunctionCallExpression(String name, List<IExpression> arguments) {
             this.name = name;
             this.arguments = arguments;
         }
     }
-    interface IMonadicExpression extends IExpression {}
-    static class MonadicExpression implements IMonadicExpression {
-        IMonadicOperator operator;
-        IExpression expression;
+    public interface IMonadicExpression extends IExpression {}
+    public static class MonadicExpression implements IMonadicExpression {
+        public IMonadicOperator operator;
+        public IExpression expression;
 
         public MonadicExpression(IMonadicOperator operator, IExpression expression) {
             this.operator = operator;
             this.expression = expression;
         }
     }
-    interface IDyadicExpression extends IExpression {}
-    interface IMultiplicationDyadicExpression extends IDyadicExpression {}
-    static class MultiplicationDyadicExpression implements IMultiplicationDyadicExpression {
-        MultOpr.Attr operator;
-        IExpression l;
-        IExpression r;
+    public interface IDyadicExpression extends IExpression {}
+    public interface IMultiplicationDyadicExpression extends IDyadicExpression {}
+    public static class MultiplicationDyadicExpression implements IMultiplicationDyadicExpression {
+        public MultOpr.Attr operator;
+        public IExpression l;
+        public IExpression r;
 
         public MultiplicationDyadicExpression(MultOpr.Attr operator, IExpression l, IExpression r) {
             this.operator = operator;
@@ -205,11 +205,11 @@ public class AbsSyn {
             this.r = r;
         }
     }
-    interface IAdditionDyadicExpression extends IDyadicExpression {}
-    static class AdditionDyadicExpression implements IAdditionDyadicExpression {
-        AddOpr.Attr operator;
-        IExpression l;
-        IExpression r;
+    public interface IAdditionDyadicExpression extends IDyadicExpression {}
+    public static class AdditionDyadicExpression implements IAdditionDyadicExpression {
+        public AddOpr.Attr operator;
+        public IExpression l;
+        public IExpression r;
 
         public AdditionDyadicExpression(AddOpr.Attr operator, IExpression l, IExpression r) {
             this.operator = operator;
@@ -217,11 +217,11 @@ public class AbsSyn {
             this.r = r;
         }
     }
-    interface IRelativeDyadicExpression extends IDyadicExpression {}
-    static class RelativeDyadicExpression implements IRelativeDyadicExpression {
-        RelOpr.Attr operator;
-        IExpression l;
-        IExpression r;
+    public interface IRelativeDyadicExpression extends IDyadicExpression {}
+    public static class RelativeDyadicExpression implements IRelativeDyadicExpression {
+        public RelOpr.Attr operator;
+        public IExpression l;
+        public IExpression r;
 
         public RelativeDyadicExpression(RelOpr.Attr operator, IExpression l, IExpression r) {
             this.operator = operator;
@@ -229,11 +229,11 @@ public class AbsSyn {
             this.r = r;
         }
     }
-    interface IBoolDyadicExpression extends IDyadicExpression {}
-    static class BoolDyadicExpression implements IBoolDyadicExpression {
-        BoolOpr.Attr operator;
-        IExpression l;
-        IExpression r;
+    public interface IBoolDyadicExpression extends IDyadicExpression {}
+    public static class BoolDyadicExpression implements IBoolDyadicExpression {
+        public BoolOpr.Attr operator;
+        public IExpression l;
+        public IExpression r;
 
         public BoolDyadicExpression(BoolOpr.Attr operator, IExpression l, IExpression r) {
             this.operator = operator;
@@ -242,10 +242,10 @@ public class AbsSyn {
         }
     }
 
-    interface IRecordAccessExpression extends IExpression {}
-    static class RecordAccessExpression implements IRecordAccessExpression {
-        String recordName;
-        List<String> fieldNames;
+    public interface IRecordAccessExpression extends IExpression {}
+    public static class RecordAccessExpression implements IRecordAccessExpression {
+        public String recordName;
+        public List<String> fieldNames;
 
         public RecordAccessExpression(String recordName, List<String> fieldNames) {
             this.recordName = recordName;
@@ -253,24 +253,24 @@ public class AbsSyn {
         }
     }
 
-    interface ICommand {}
-    interface ISkipCommand extends ICommand {}
-    static class SkipCommand implements ISkipCommand {}
-    interface IAssignmentCommand extends ICommand {}
-    static class AssignmentCommand implements IAssignmentCommand {
-        IExpression l;
-        IExpression r;
+    public interface ICommand {}
+    public interface ISkipCommand extends ICommand {}
+    public static class SkipCommand implements ISkipCommand {}
+    public interface IAssignmentCommand extends ICommand {}
+    public static class AssignmentCommand implements IAssignmentCommand {
+        public IExpression l;
+        public IExpression r;
 
         public AssignmentCommand(IExpression l, IExpression r) {
             this.l = l;
             this.r = r;
         }
     }
-    interface IIfCommand extends ICommand {}
-    static class IfCommand implements IIfCommand {
-        IExpression condition;
-        List<ICommand> commands;
-        List<ICommand> elseCommands;
+    public interface IIfCommand extends ICommand {}
+    public static class IfCommand implements IIfCommand {
+        public IExpression condition;
+        public List<ICommand> commands;
+        public List<ICommand> elseCommands;
 
         public IfCommand(IExpression condition, List<ICommand> commands, List<ICommand> elseCommands) {
             this.condition = condition;
@@ -278,21 +278,21 @@ public class AbsSyn {
             this.elseCommands = elseCommands;
         }
     }
-    interface IWhileCommand extends ICommand {}
-    static class WhileCommand implements IWhileCommand {
-        IExpression condition;
-        List<ICommand> commands;
+    public interface IWhileCommand extends ICommand {}
+    public static class WhileCommand implements IWhileCommand {
+        public IExpression condition;
+        public List<ICommand> commands;
 
         public WhileCommand(IExpression condition, List<ICommand> commands) {
             this.condition = condition;
             this.commands = commands;
         }
     }
-    interface ICallCommand extends ICommand {}
-    static class CallCommand implements ICallCommand {
-        String name;
-        List<IExpression> expressions;
-        List<String> globalInits;
+    public interface ICallCommand extends ICommand {}
+    public static class CallCommand implements ICallCommand {
+        public String name;
+        public List<IExpression> expressions;
+        public List<String> globalInits;
 
         public CallCommand(String name, List<IExpression> expressions, List<String> globalInits) {
             this.name = name;
@@ -300,17 +300,17 @@ public class AbsSyn {
             this.globalInits = globalInits;
         }
     }
-    interface IDebugInCommand extends ICommand {}
-    static class DebugInCommand implements IDebugInCommand {
-        IExpression expression;
+    public interface IDebugInCommand extends ICommand {}
+    public static class DebugInCommand implements IDebugInCommand {
+        public IExpression expression;
 
         public DebugInCommand(IExpression expression) {
             this.expression = expression;
         }
     }
-    interface IDebugOutCommand extends ICommand {}
-    static class DebugOutCommand implements IDebugOutCommand {
-        IExpression expression;
+    public interface IDebugOutCommand extends ICommand {}
+    public static class DebugOutCommand implements IDebugOutCommand {
+        public IExpression expression;
 
         public DebugOutCommand(IExpression expression) {
             this.expression = expression;
@@ -318,11 +318,11 @@ public class AbsSyn {
     }
 
     public interface IProgram {}
-    static class Program implements IProgram {
-        String name;
-        List<IProgramParameter> programParameters;
-        List<IDeclaration> globalDeclarations;
-        List<ICommand> commands;
+    public static class Program implements IProgram {
+        public String name;
+        public List<IProgramParameter> programParameters;
+        public List<IDeclaration> globalDeclarations;
+        public List<ICommand> commands;
 
         public Program(String name, List<IProgramParameter> programParameters, List<IDeclaration> globalDeclarations, List<ICommand> commands) {
             this.name = name;
