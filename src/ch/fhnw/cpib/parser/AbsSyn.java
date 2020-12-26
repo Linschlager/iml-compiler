@@ -19,7 +19,7 @@ public class AbsSyn {
          *           Thrown when the code segment of the VM is full.
          */
         default int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            // todo remove this and check all missing implementations (maybe they dont need to implement this interface?)
+            // todo remove this default impl and check all missing implementations (maybe they dont need to implement this interface?)
             throw new RuntimeException("Not yet implemented");
         }
     }
@@ -471,6 +471,25 @@ public class AbsSyn {
             this.commands = commands;
             this.elseCommands = elseCommands;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = condition.codeRValue(codeArray, location, env);
+            int jumpLocation = location++;
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
+            int afterIfBodyJumpLocation = location++;
+            int elseBodyStartLocation = location;
+            for (ICommand command : elseCommands) {
+                location = command.code(codeArray, location, env);
+            }
+            int afterElseBodyLocation = location;
+
+            codeArray.put(jumpLocation, new IInstructions.CondJump(elseBodyStartLocation));
+            codeArray.put(afterIfBodyJumpLocation, new IInstructions.UncondJump(afterElseBodyLocation));
+            return location;
+        }
     }
     public interface IWhileCommand extends ICommand {}
     public static class WhileCommand implements IWhileCommand {
@@ -480,6 +499,21 @@ public class AbsSyn {
         public WhileCommand(IExpression condition, List<ICommand> commands) {
             this.condition = condition;
             this.commands = commands;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            int conditionLocation = location;
+            location = condition.codeRValue(codeArray, location, env);
+            int jumpLocation = location++;
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
+            codeArray.put(location++, new IInstructions.UncondJump(conditionLocation));
+            int afterBodyLocation = location;
+            codeArray.put(jumpLocation, new IInstructions.CondJump(afterBodyLocation));
+
+            return location;
         }
     }
     public interface ICallCommand extends ICommand {}
@@ -501,6 +535,14 @@ public class AbsSyn {
         public DebugInCommand(IExpression expression) {
             this.expression = expression;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = expression.codeLValue(codeArray, location, env);
+            // todo differentiate between bool and int expressions, and maybe add better label for input
+            codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
+            return location;
+        }
     }
     public interface IDebugOutCommand extends ICommand {}
     public static class DebugOutCommand implements IDebugOutCommand {
@@ -508,6 +550,14 @@ public class AbsSyn {
 
         public DebugOutCommand(IExpression expression) {
             this.expression = expression;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = expression.codeRValue(codeArray, location, env);
+            // todo differentiate between bool and int expressions, and maybe add better label for input
+            codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+            return location;
         }
     }
 
@@ -527,21 +577,24 @@ public class AbsSyn {
 
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            // todo program
+            if (!programParameters.isEmpty()) throw new RuntimeException("program params are not yet implemented");
 
-            // todo global vars
+            for (IDeclaration declaration : globalDeclarations) {
+                if (declaration instanceof StorageDeclaration) {
+                    //StorageDeclaration storageDeclaration = (StorageDeclaration) declaration;
+                    codeArray.put(location++, new IInstructions.AllocBlock(1));
+                    // todo maybe sum up all store decls and produce only one allocBlock instruction?
+                } else {
+                    // todo, maybe we can ignore some other declarations (like record shape) as they produce no code?
+                    throw new RuntimeException("Global declaration not yet implemented:" + declaration.getClass().getSimpleName());
+                }
+            }
 
-            // todo remove this sample hardcoded program
-            int inputLocation = location;
-            codeArray.put(location++, new IInstructions.AllocBlock(1));
-            codeArray.put(location++, new IInstructions.LoadImInt(inputLocation));
-            codeArray.put(location++, new IInstructions.Dup());
-            codeArray.put(location++, new IInstructions.InputInt("dummy"));
-            codeArray.put(location++, new IInstructions.Deref()); // deref inputLocation
-            codeArray.put(location++, new IInstructions.LoadImInt(12));
-            codeArray.put(location++, new IInstructions.MultInt());
-            codeArray.put(location++, new IInstructions.OutputInt("result"));
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
             codeArray.put(location++, new IInstructions.Stop());
+
             return location;
         }
     }
