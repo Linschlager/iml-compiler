@@ -1,11 +1,26 @@
 package ch.fhnw.cpib.parser;
 
 import ch.fhnw.cpib.lexer.tokens.*;
+import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray.CodeTooSmallError;
 
 import java.util.List;
 
 public class AbsSyn {
-    public interface IType {}
+
+    interface IAbsSynNode {
+
+        /**
+         * Creates the code in the VM and returns the new location.
+         *
+         * @throws CodeTooSmallError
+         *           Thrown when the code segment of the VM is full.
+         */
+        default int code(ICodeArray codeArray, int location) throws CodeTooSmallError {
+            throw new RuntimeException("Not yet implemented");
+        }
+    }
+    public interface IType extends IAbsSynNode {}
     public static class TraditionalType implements IType {
         public Type type;
         public TraditionalType(Type type) {
@@ -20,20 +35,20 @@ public class AbsSyn {
         }
     }
 
-    public interface IFlowMode {}
+    public interface IFlowMode extends IAbsSynNode {}
     public static class InFlowMode implements IFlowMode {}
     public static class InOutFlowMode implements IFlowMode {}
     public static class OutFlowMode implements IFlowMode {}
 
-    public interface IMechMode {}
+    public interface IMechMode extends IAbsSynNode {}
     public static class CopyMechMode implements IMechMode {}
     public static class RefMechMode implements IMechMode {}
 
-    public interface IChangeMode {}
+    public interface IChangeMode extends IAbsSynNode {}
     public static class VarChangeMode implements IChangeMode {}
     public static class ConstChangeMode implements IChangeMode {}
 
-    public interface ITypedIdentifier {}
+    public interface ITypedIdentifier extends IAbsSynNode {}
     public static class TypedIdentifier implements ITypedIdentifier {
         public String name;
         public IType type;
@@ -43,7 +58,7 @@ public class AbsSyn {
         }
     }
 
-    public interface IProgramParameter {}
+    public interface IProgramParameter extends IAbsSynNode {}
     public static class ProgramParameter implements IProgramParameter {
         public IFlowMode flowMode;
         public IChangeMode changeMode;
@@ -56,7 +71,7 @@ public class AbsSyn {
         }
     }
 
-    public interface IParameter {}
+    public interface IParameter extends IAbsSynNode {}
     public static class Parameter implements IParameter {
         public IFlowMode flowMode;
         public IMechMode mechMode;
@@ -71,7 +86,7 @@ public class AbsSyn {
         }
     }
 
-    public interface IGlobalImport {}
+    public interface IGlobalImport extends IAbsSynNode {}
     public static class GlobalImport implements IGlobalImport {
         public IFlowMode flowMode;
         public IChangeMode changeMode;
@@ -84,7 +99,7 @@ public class AbsSyn {
         }
     }
 
-    public interface IDeclaration {}
+    public interface IDeclaration extends IAbsSynNode {}
     public interface IStorageDeclaration extends IDeclaration {}
     public static class StorageDeclaration implements IStorageDeclaration {
         public IChangeMode changeMode;
@@ -140,11 +155,11 @@ public class AbsSyn {
         }
     }
 
-    public interface IMonadicOperator {}
+    public interface IMonadicOperator extends IAbsSynNode {}
     public static class NotMonadicOperator implements IMonadicOperator {}
     public static class PosMonadicOperator implements IMonadicOperator {}
 
-    public interface IExpression {}
+    public interface IExpression extends IAbsSynNode {}
     public interface ILiteralExpression extends IExpression {}
     public interface IBoolLiteralExpression extends ILiteralExpression {}
     public static class BoolLiteralExpression implements IBoolLiteralExpression {
@@ -253,7 +268,7 @@ public class AbsSyn {
         }
     }
 
-    public interface ICommand {}
+    public interface ICommand extends IAbsSynNode {}
     public interface ISkipCommand extends ICommand {}
     public static class SkipCommand implements ISkipCommand {}
     public interface IAssignmentCommand extends ICommand {}
@@ -317,7 +332,7 @@ public class AbsSyn {
         }
     }
 
-    public interface IProgram {}
+    public interface IProgram extends IAbsSynNode {}
     public static class Program implements IProgram {
         public String name;
         public List<IProgramParameter> programParameters;

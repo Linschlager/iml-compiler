@@ -1,0 +1,29 @@
+program Factorial()
+global
+  fun factRec(n:int32) returns const fact:int32
+  do
+    if n = 0 then
+      fact init := 1
+    else
+      fact init := n * factRec(n-1)
+    endif
+  endfun;
+
+  fun fact(n:int32) returns var fact:int32
+  local
+    var i:int32
+  do
+    fact init := 1;
+    i    init := 2;
+    while i <= n do
+      fact := fact * i;
+      i    := i + 1
+    endwhile
+  endfun;
+
+  n:int32
+do
+  debugin n init;
+  debugout factRec(n);
+  debugout fact(n)
+endprogram
