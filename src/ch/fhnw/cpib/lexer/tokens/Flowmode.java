@@ -2,7 +2,7 @@ package ch.fhnw.cpib.lexer.tokens;
 
 public class Flowmode extends Token {
 
-    private final Attr attr;
+    public final Attr attr;
 
     public enum Attr {
         IN, INOUT, OUT

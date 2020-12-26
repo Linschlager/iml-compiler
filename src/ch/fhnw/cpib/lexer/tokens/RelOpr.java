@@ -1,7 +1,7 @@
 package ch.fhnw.cpib.lexer.tokens;
 
 public class RelOpr extends Token {
-    private final Attr attr;
+    public final Attr attr;
 
     public enum Attr {
         EQ, NE, LT, GT, LE, GE;

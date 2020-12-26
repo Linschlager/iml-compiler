@@ -7,10 +7,10 @@ public class Literal extends Token {
     }
 
     public final Attr attr;
-    public final int numberValue;
+    public final String numberValue; // Needs to be String to support int1024
     public final boolean boolValue;
 
-    public Literal(int value) {
+    public Literal(String value) {
         super(Terminal.LITERAL);
         this.attr = Attr.NUMBER;
         this.numberValue = value;
@@ -19,7 +19,7 @@ public class Literal extends Token {
     public Literal(boolean value) {
         super(Terminal.LITERAL);
         this.attr = Attr.BOOL;
-        this.numberValue = 0;
+        this.numberValue = null;
         this.boolValue = value;
     }
 
