@@ -1,5 +1,6 @@
 package ch.fhnw.cpib;
 
+import ch.fhnw.cpib.codeGen.Environment;
 import ch.fhnw.cpib.lexer.ITokenList;
 import ch.fhnw.cpib.lexer.Scanner;
 import ch.fhnw.cpib.parser.AbsSyn;
@@ -7,6 +8,7 @@ import ch.fhnw.cpib.parser.ConcSyn;
 import ch.fhnw.cpib.parser.Parser;
 import ch.fhnw.lederer.virtualmachineFS2015.CodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.VirtualMachine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +25,8 @@ public class Main {
         AbsSyn.IProgram abstractProgram = program.toAbsSyn();
 
         ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
-        abstractProgram.code(codeArray, 0);
-
+        abstractProgram.code(codeArray, 0, new Environment() /* todo, create environemnt? */);
+        codeArray.resize();
+        new VirtualMachine(codeArray, 100_000);
     }
 }
