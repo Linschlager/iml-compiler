@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class AbsSyn {
-    public static class ProcedureArgument {
+        public static class ProcedureArgument {
         public Types type;
         public AccessMode accessMode;
         public Scope scope;
@@ -25,7 +25,6 @@ public class AbsSyn {
             this.scope = scope;
         }
     }
-
     public static class ProcedureSignature {
         public List<ProcedureArgument> arguments;
 
@@ -33,7 +32,6 @@ public class AbsSyn {
             this.arguments = arguments;
         }
     }
-
     public static class FunctionSignature extends ProcedureSignature {
         public Types returnType;
 
@@ -42,7 +40,6 @@ public class AbsSyn {
             this.returnType = returnType;
         }
     }
-
     // Basically TypedIdentifier
     public static class RecordField {
         public String name;
@@ -53,7 +50,6 @@ public class AbsSyn {
             this.type = type;
         }
     }
-
     public static class RecordSignature {
         public List<RecordField> fields;
 
@@ -65,12 +61,10 @@ public class AbsSyn {
 
     private static final Map<String, ProcedureSignature> procedureMap;
     private static final Map<String, RecordSignature> recordMap;
-    private static final Map<String, Types> globalVariableMap;
 
     static {
         procedureMap = new HashMap<>();
         recordMap = new HashMap<>();
-        globalVariableMap = new HashMap<>();
     }
 
     public interface IType {
@@ -200,8 +194,9 @@ public class AbsSyn {
 
         @Override
         public IParameter check(Map<String, Types> localScope) throws ContextError {
-            if (localScope.containsKey(typedIdentifier.getName()))
-                throw new ContextError(String.format("'%s' has already been declared", typedIdentifier.getName()));
+            if (localScope.containsKey(typedIdentifier.getName())) {
+                // throw new ContextError(String.format("'%s' has already been declared", typedIdentifier.getName()));
+            }
 
             return this;
         }
@@ -224,8 +219,6 @@ public class AbsSyn {
 
         @Override
         public IGlobalImport check(Map<String, Types> localScope) throws ContextError {
-            if (!globalVariableMap.containsKey(name))
-                throw new ContextError(String.format("Couldn't find global declaration for '%s'", name));
             if (localScope.containsKey(name))
                 throw new ContextError(String.format("'%s' has already been declared", name));
 
@@ -234,11 +227,10 @@ public class AbsSyn {
     }
 
     public interface IDeclaration {
-        public IDeclaration check() throws TypeError, ContextError;
+        public IDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError;
     }
 
     public interface IStorageDeclaration extends IDeclaration {
-        public IStorageDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError;
     }
 
     public static class StorageDeclaration implements IStorageDeclaration {
@@ -256,14 +248,10 @@ public class AbsSyn {
         }
 
         @Override
-        public IStorageDeclaration check(Map<String, Types> localVariableMap) throws TypeError, ContextError {
-            if (globalVariableMap.containsKey(typedIdentifier.getName()))
-                throw new ContextError(String.format("%s is already declared globally", typedIdentifier.getName()));
-            if (localVariableMap.containsKey(typedIdentifier.getName())) {
+        public IStorageDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError {
+            if (localScope.containsKey(typedIdentifier.getName())) {
                 throw new ContextError(String.format("%s is already declared locally", typedIdentifier.getName()));
             }
-            // TODO add to global map
-            globalVariableMap.put(typedIdentifier.getName(), typedIdentifier.getType());
 
             return this;
         }
@@ -275,40 +263,30 @@ public class AbsSyn {
     public static class FunctionDeclaration implements IFunctionDeclaration {
         public String name;
         public List<IParameter> parameterList;
-        public IStorageDeclaration storageDeclaration;
+        public IStorageDeclaration returnValue;
         public List<IGlobalImport> globalImports;
         public List<IStorageDeclaration> localImports;
         public List<ICommand> commands;
 
-        public FunctionDeclaration(String name, List<IParameter> parameterList, IStorageDeclaration storageDeclaration, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
+        public FunctionDeclaration(String name, List<IParameter> parameterList, IStorageDeclaration returnValue, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
             this.name = name;
             this.parameterList = parameterList;
-            this.storageDeclaration = storageDeclaration;
+            this.returnValue = returnValue;
             this.globalImports = globalImports;
             this.localImports = localImports;
             this.commands = commands;
         }
 
         @Override
-        public IDeclaration check() throws TypeError, ContextError {
+        public IDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (procedureMap.containsKey(name)) {
                 throw new ContextError("Function " + name + " is already declared");
             }
             if (recordMap.containsKey(name)) {
                 throw new ContextError("Function " + name + " cannot be declared, there is a record of that name.");
             }
-            Map<String, Types> symbolTable = new HashMap<>();
-            // TODO global imports
 
-            storageDeclaration = (IStorageDeclaration) storageDeclaration.check(); // TODO pass local scope
-            List<ICommand> newCmds = new LinkedList<>();
-            for (ICommand c : commands) {
-                newCmds.add(c.check(symbolTable)); // TODO pass local scope
-            }
-            commands = newCmds;
-
-            // All checks have passed; Construct function signature
-            Types returnType = ((StorageDeclaration) storageDeclaration).typedIdentifier.getType();
+            // Register function before checking commands to allow for recursion
             List<ProcedureArgument> args = new LinkedList<>();
             for (IParameter iParameter : parameterList) {
                 Parameter param = (Parameter) iParameter;
@@ -328,9 +306,32 @@ public class AbsSyn {
 
                 args.add(new ProcedureArgument(t, m, s));
             }
-            FunctionSignature signature = new FunctionSignature(args, returnType);
+            returnValue = (StorageDeclaration) returnValue.check(localScope);
+            var returns = ((StorageDeclaration)returnValue).typedIdentifier;
+            FunctionSignature signature = new FunctionSignature(args, returns.getType());
             // Register function signature
             procedureMap.put(name, signature);
+
+            Map<String, Types> symbolTable = new HashMap<>(localScope);
+            // TODO global imports
+
+            symbolTable.put(returns.getName(), returns.getType());
+
+            List<IGlobalImport> newGlobImps = new LinkedList<>();
+            for (IGlobalImport gi : globalImports) {
+                newGlobImps.add(gi.check(symbolTable));
+                var g = (GlobalImport)gi;
+                if (symbolTable.get(g.name) == null) {
+                    throw new ContextError(String.format("Couldn't find '%s'", g.name));
+                }
+            }
+            globalImports = newGlobImps;
+
+            List<ICommand> newCmds = new LinkedList<>();
+            for (ICommand c : commands) {
+                newCmds.add(c.check(symbolTable));
+            }
+            commands = newCmds;
 
             return this;
         }
@@ -355,25 +356,34 @@ public class AbsSyn {
         }
 
         @Override
-        public IDeclaration check() throws TypeError, ContextError {
+        public IDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (procedureMap.containsKey(name)) {
                 throw new ContextError("Procedure " + name + " is already declared");
             }
             if (recordMap.containsKey(name)) {
                 throw new ContextError("Procedure " + name + " cannot be declared, there is a record of that name.");
             }
-            // TODO build local symbolTable
-            Map<String, Types> symbolTable = new HashMap<>();
+
+            // Add procedure to procedureMap to allow for recursion
+            List<ProcedureArgument> args = new LinkedList<>();
+            for (IParameter iParameter : parameters) {
+                var p = (Parameter) iParameter;
+                // TODO AccessMode and Scope
+                var pa = new ProcedureArgument(p.typedIdentifier.getType(), AccessMode.DIRECT, Scope.LOCAL);
+                args.add(pa);
+            }
+            procedureMap.put(name, new ProcedureSignature(args));
+
+            // Construct symbolTable
+            Map<String, Types> symbolTable = new HashMap<>(localScope);
+
             for (IParameter iParameter : parameters) {
                 var p = (Parameter) iParameter.check(symbolTable);
                 symbolTable.put(p.typedIdentifier.getName(), p.typedIdentifier.getType());
             }
             for (IGlobalImport iGlobalImport : globalImports) {
                 var gi = (GlobalImport) iGlobalImport.check(symbolTable);
-                if (!globalVariableMap.containsKey(gi.name))
-                    throw new ContextError(String.format("%s is not globally declared", gi.name));
-
-                symbolTable.put(gi.name, globalVariableMap.get(gi.name));
+                symbolTable.put(gi.name, localScope.get(gi.name));
             }
             for (IStorageDeclaration localImport : localImports) {
                 var li = (StorageDeclaration) localImport.check(symbolTable);
@@ -383,19 +393,6 @@ public class AbsSyn {
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand c : commands) newCmds.add(c.check(symbolTable));
             commands = newCmds;
-
-
-            // TODO add to global proc map
-            // TODO check global and local imports. add them to scope
-            // All checks have passed, construct ProcedureSignature
-            List<ProcedureArgument> args = new LinkedList<>();
-            for (IParameter iParameter : parameters) {
-                var p = (Parameter) iParameter;
-                // TODO AccessMode and Scope
-                var pa = new ProcedureArgument(p.typedIdentifier.getType(), AccessMode.DIRECT, Scope.LOCAL);
-                args.add(pa);
-            }
-            procedureMap.put(name, new ProcedureSignature(args));
 
             return this;
         }
@@ -414,7 +411,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IDeclaration check() throws TypeError, ContextError {
+        public IDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (recordMap.containsKey(name)) {
                 throw new ContextError("Record " + name + " is already declared");
             }
@@ -427,6 +424,9 @@ public class AbsSyn {
             );
             RecordSignature recordSignature = new RecordSignature(f);
             recordMap.put(name, recordSignature);
+
+            var recordType = new Types("Record", name);
+            Types.allTypes.put(name, recordType);
 
             return this;
         }
@@ -444,7 +444,7 @@ public class AbsSyn {
     public interface IExpression {
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError;
 
-        public Types getType();
+        public Types getType(Map<String, Types> localScope) throws TypeError, ContextError;
 
         public boolean isValidLeft();
 
@@ -470,7 +470,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.BOOLEAN;
         }
 
@@ -501,7 +501,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.INTEGER;
         }
 
@@ -535,9 +535,12 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) throws ContextError {
             // TODO look up in global variable map
-            return null;
+            var type = localScope.get(name);
+            if (type == null)
+                throw new ContextError(String.format("Couldn't find %s in %s", name, localScope.toString()));
+            return type;
         }
 
         @Override
@@ -579,23 +582,36 @@ public class AbsSyn {
             if (!procedureMap.containsKey(name) && !recordMap.containsKey(name))
                 throw new ContextError(String.format("Unknown function %s", name));
 
-            List<IExpression> newExprs = new LinkedList<>();
-            for (IExpression e : arguments) {
-                newExprs.add(e.check(localScope));
-            }
-            arguments = newExprs;
-
-            // TODO checks
+            List<IExpression> newArgs = new LinkedList<>();
+            for (IExpression e : arguments) newArgs.add(e.check(localScope));
+            arguments = newArgs;
 
             if (recordMap.containsKey(name)) {
-                return new RecordCallExpression(name, arguments);
+                return new RecordCallExpression(name, arguments).check(localScope);
             }
+
+            // TODO checks
+            var desiredArguments = procedureMap.get(name).arguments;
+            for (int i = 0; i < arguments.size(); i++) {
+                var actualType = arguments.get(i).getType(localScope);
+                var desiredType = desiredArguments.get(i).type;
+                if (desiredType != actualType)
+                    throw new TypeError("FunctionCallExpression", actualType.toString(), desiredType.toString());
+            }
+
             return this;
         }
 
         @Override
-        public Types getType() {
-            return null; // TODO look up in global procedure map
+        public Types getType(Map<String, Types> localScope) throws TypeError, ContextError {
+            var signature = procedureMap.get(name);
+            if (signature == null) {
+                throw new ContextError(String.format("Couldn't find function '%s'", name));
+            }
+            if (signature instanceof FunctionSignature) {
+                return ((FunctionSignature) signature).returnType;
+            }
+            throw new TypeError("FunctionCallExpression", "Procedure", "Function");
         }
     }
 
@@ -611,12 +627,13 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError {
+            // TODO check args
             return this;
         }
 
         @Override
-        public Types getType() {
-            return Types.allTypes.get(name); // TODO put in this list on definition
+        public Types getType(Map<String, Types> localScope) {
+            return Types.allTypes.get(name);
         }
     }
 
@@ -643,19 +660,19 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-            if (operator instanceof NotMonadicOperator && expression.getType() != Types.BOOLEAN) {
-                throw new TypeError("PosMonadicOperator", expression.getType().toString(), Types.BOOLEAN.toString());
+            if (operator instanceof NotMonadicOperator && expression.getType(localScope) != Types.BOOLEAN) {
+                throw new TypeError("PosMonadicOperator", expression.getType(localScope).toString(), Types.BOOLEAN.toString());
 
             }
-            if (operator instanceof PosMonadicOperator && expression.getType() != Types.INTEGER) {
-                throw new TypeError("PosMonadicOperator", expression.getType().toString(), Types.INTEGER.toString());
+            if (operator instanceof PosMonadicOperator && expression.getType(localScope) != Types.INTEGER) {
+                throw new TypeError("PosMonadicOperator", expression.getType(localScope).toString(), Types.INTEGER.toString());
             }
             return expression.check(localScope);
         }
 
         @Override
-        public Types getType() {
-            return expression.getType();
+        public Types getType(Map<String, Types> localScope) throws TypeError, ContextError {
+            return expression.getType(localScope);
         }
     }
 
@@ -687,11 +704,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-            if (l.getType() != Types.INTEGER) {
-                throw new TypeError("MultiplicationDyadicExpression", l.getType().toString(), Types.INTEGER.toString());
+            if (l.getType(localScope) != Types.INTEGER) {
+                throw new TypeError("MultiplicationDyadicExpression", l.getType(localScope).toString(), Types.INTEGER.toString());
             }
-            if (r.getType() != Types.INTEGER) {
-                throw new TypeError("MultiplicationDyadicExpression", r.getType().toString(), Types.INTEGER.toString());
+            if (r.getType(localScope) != Types.INTEGER) {
+                throw new TypeError("MultiplicationDyadicExpression", r.getType(localScope).toString(), Types.INTEGER.toString());
             }
             l = l.check(localScope);
             r = r.check(localScope);
@@ -699,7 +716,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.INTEGER;
         }
     }
@@ -720,11 +737,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-            if (l.getType() != Types.INTEGER) {
-                throw new TypeError("AdditionDyadicExpression", l.getType().toString(), Types.INTEGER.toString());
+            if (l.getType(localScope) != Types.INTEGER) {
+                throw new TypeError("AdditionDyadicExpression", l.getType(localScope).toString(), Types.INTEGER.toString());
             }
-            if (r.getType() != Types.INTEGER) {
-                throw new TypeError("AdditionDyadicExpression", r.getType().toString(), Types.INTEGER.toString());
+            if (r.getType(localScope) != Types.INTEGER) {
+                throw new TypeError("AdditionDyadicExpression", r.getType(localScope).toString(), Types.INTEGER.toString());
             }
             l = l.check(localScope);
             r = r.check(localScope);
@@ -732,7 +749,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.INTEGER;
         }
     }
@@ -756,18 +773,18 @@ public class AbsSyn {
             switch (operator) {
                 case EQ:
                 case NE:
-                    if (l.getType() == Types.BOOLEAN && r.getType() != Types.BOOLEAN) {
-                        throw new TypeError("RelativeDyadicExpression", r.getType().toString(), Types.BOOLEAN.toString());
+                    if (l.getType(localScope) == Types.BOOLEAN && r.getType(localScope) != Types.BOOLEAN) {
+                        throw new TypeError("RelativeDyadicExpression", r.getType(localScope).toString(), Types.BOOLEAN.toString());
                     }
                 case GE:
                 case GT:
                 case LE:
                 case LT:
-                    if (l.getType() != Types.INTEGER) {
-                        throw new TypeError("RelativeDyadicExpression", l.getType().toString(), Types.INTEGER.toString());
+                    if (l.getType(localScope) != Types.INTEGER) {
+                        throw new TypeError("RelativeDyadicExpression", l.getType(localScope).toString(), Types.INTEGER.toString());
                     }
-                    if (r.getType() != Types.INTEGER) {
-                        throw new TypeError("RelativeDyadicExpression", r.getType().toString(), Types.INTEGER.toString());
+                    if (r.getType(localScope) != Types.INTEGER) {
+                        throw new TypeError("RelativeDyadicExpression", r.getType(localScope).toString(), Types.INTEGER.toString());
                     }
                     l = l.check(localScope);
                     r = r.check(localScope);
@@ -776,7 +793,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.BOOLEAN;
         }
     }
@@ -797,11 +814,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-            if (l.getType() != Types.BOOLEAN) {
-                throw new TypeError("RelativeDyadicExpression", l.getType().toString(), Types.BOOLEAN.toString());
+            if (l.getType(localScope) != Types.BOOLEAN) {
+                throw new TypeError("RelativeDyadicExpression", l.getType(localScope).toString(), Types.BOOLEAN.toString());
             }
-            if (r.getType() != Types.BOOLEAN) {
-                throw new TypeError("RelativeDyadicExpression", r.getType().toString(), Types.BOOLEAN.toString());
+            if (r.getType(localScope) != Types.BOOLEAN) {
+                throw new TypeError("RelativeDyadicExpression", r.getType(localScope).toString(), Types.BOOLEAN.toString());
             }
             l = l.check(localScope);
             r = r.check(localScope);
@@ -809,7 +826,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public Types getType(Map<String, Types> localScope) {
             return Types.BOOLEAN;
         }
     }
@@ -836,13 +853,30 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
-            return null; // TODO look up in global and local maps
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
+            getType(localScope);
+
+            return this;
         }
 
         @Override
-        public Types getType() {
-            return null; // TODO look up in global map -> Only last element is relevant
+        public Types getType(Map<String, Types> localScope) throws ContextError {
+            var record = recordMap.get(recordName);
+            Types type = null;
+            for (String field : fieldNames) {
+                var fieldOpt = record.fields.stream().filter(f -> f.name.equals(field)).findFirst();
+                if (fieldOpt.isEmpty()) {
+                    throw new ContextError(String.format("Couldn't find field %s on %s", field, recordName));
+                }
+                var nextField = fieldOpt.get();
+                if (nextField.type.getRecordName() != null) {
+                    record = recordMap.get(nextField.type.getRecordName());
+                } else {
+                    type = nextField.type;
+                }
+            }
+            if (type == null) throw new ContextError("Invalid record");
+            return type;
         }
     }
 
@@ -884,8 +918,8 @@ public class AbsSyn {
             if (!r.isValidRight())
                 throw new ContextError(String.format("%s cannot be on the right side of an assignment", r.toString()));
 
-            if (l.getType() != r.getType())
-                throw new TypeError("AssignmentCommand", l.getType().toString(), r.getType().toString());
+            if (l.getType(localScope) != r.getType(localScope))
+                throw new TypeError("AssignmentCommand", l.getType(localScope).toString(), r.getType(localScope).toString());
 
             return this;
         }
@@ -909,8 +943,8 @@ public class AbsSyn {
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             condition = condition.check(localScope);
 
-            if (condition.getType() != Types.BOOLEAN)
-                throw new TypeError("IfCommand condition", condition.getType().toString(), Types.BOOLEAN.toString());
+            if (condition.getType(localScope) != Types.BOOLEAN)
+                throw new TypeError("IfCommand condition", condition.getType(localScope).toString(), Types.BOOLEAN.toString());
 
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -943,8 +977,8 @@ public class AbsSyn {
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             condition = condition.check(localScope);
 
-            if (condition.getType() != Types.BOOLEAN)
-                throw new TypeError("WhileCommand", condition.getType().toString(), Types.BOOLEAN.toString());
+            if (condition.getType(localScope) != Types.BOOLEAN)
+                throw new TypeError("WhileCommand", condition.getType(localScope).toString(), Types.BOOLEAN.toString());
 
             List<ICommand> newElseCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -952,7 +986,7 @@ public class AbsSyn {
             }
             commands = newElseCmds;
 
-            return null;
+            return this;
         }
     }
 
@@ -1046,14 +1080,18 @@ public class AbsSyn {
             List<IProgramParameter> newParams = new LinkedList<>();
             for (IProgramParameter pp : programParameters) {
                 newParams.add(pp.check());
-                // TODO add to symbol table
+                var p = (ProgramParameter)pp;
+                symbolTable.put(p.typedIdentifier.getName(), p.typedIdentifier.getType());
             }
             programParameters = newParams;
 
             List<IDeclaration> newGlobDecls = new LinkedList<>();
             for (IDeclaration gd : globalDeclarations) {
-                newGlobDecls.add(gd.check());
-                // TODO add to symbol table
+                newGlobDecls.add(gd.check(symbolTable));
+                if (gd instanceof StorageDeclaration) {
+                    var s = (StorageDeclaration) gd;
+                    symbolTable.put(s.typedIdentifier.getName(), s.typedIdentifier.getType());
+                }
             }
             globalDeclarations = newGlobDecls;
 
