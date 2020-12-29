@@ -297,13 +297,13 @@ public class AbsSyn {
             if (recordMap.containsKey(name)) {
                 throw new ContextError("Function " + name + " cannot be declared, there is a record of that name.");
             }
-
+            Map<String, Types> symbolTable = new HashMap<>();
             // TODO global imports
 
             storageDeclaration = (IStorageDeclaration) storageDeclaration.check(); // TODO pass local scope
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand c : commands) {
-                newCmds.add(c.check()); // TODO pass local scope
+                newCmds.add(c.check(symbolTable)); // TODO pass local scope
             }
             commands = newCmds;
 
@@ -390,7 +390,7 @@ public class AbsSyn {
             // All checks have passed, construct ProcedureSignature
             List<ProcedureArgument> args = new LinkedList<>();
             for (IParameter iParameter : parameters) {
-                var p = (Parameter)iParameter;
+                var p = (Parameter) iParameter;
                 // TODO AccessMode and Scope
                 var pa = new ProcedureArgument(p.typedIdentifier.getType(), AccessMode.DIRECT, Scope.LOCAL);
                 args.add(pa);
@@ -442,8 +442,13 @@ public class AbsSyn {
     }
 
     public interface IExpression {
-        public IExpression check(Map<String, Types> localScope) throws TypeError;
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError;
+
         public Types getType();
+
+        public boolean isValidLeft();
+
+        public boolean isValidRight();
     }
 
     public interface ILiteralExpression extends IExpression {
@@ -468,6 +473,16 @@ public class AbsSyn {
         public Types getType() {
             return Types.BOOLEAN;
         }
+
+        @Override
+        public boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        public boolean isValidRight() {
+            return true;
+        }
     }
 
     public interface IIntLiteralExpression extends ILiteralExpression {
@@ -488,6 +503,16 @@ public class AbsSyn {
         @Override
         public Types getType() {
             return Types.INTEGER;
+        }
+
+        @Override
+        public boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        public boolean isValidRight() {
+            return true;
         }
     }
 
@@ -514,9 +539,29 @@ public class AbsSyn {
             // TODO look up in global variable map
             return null;
         }
+
+        @Override
+        public boolean isValidLeft() {
+            return true;
+        }
+
+        @Override
+        public boolean isValidRight() {
+            return !init; // TODO. Current thinking; R-Assignments cannot include init
+        }
     }
 
     public interface IFunctionCallExpression extends IExpression {
+
+        @Override
+        default boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        default boolean isValidRight() {
+            return true;
+        }
     }
 
     public static class FunctionCallExpression implements IFunctionCallExpression {
@@ -529,7 +574,10 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
+
+            if (!procedureMap.containsKey(name) && !recordMap.containsKey(name))
+                throw new ContextError(String.format("Unknown function %s", name));
 
             List<IExpression> newExprs = new LinkedList<>();
             for (IExpression e : arguments) {
@@ -537,7 +585,12 @@ public class AbsSyn {
             }
             arguments = newExprs;
 
-            return this; // TODO
+            // TODO checks
+
+            if (recordMap.containsKey(name)) {
+                return new RecordCallExpression(name, arguments);
+            }
+            return this;
         }
 
         @Override
@@ -546,7 +599,37 @@ public class AbsSyn {
         }
     }
 
+    // Only returned in static analysis of FunctionCallExpression
+    public static class RecordCallExpression implements IFunctionCallExpression {
+        public String name;
+        public List<IExpression> arguments;
+
+        public RecordCallExpression(String name, List<IExpression> arguments) {
+            this.name = name;
+            this.arguments = arguments;
+        }
+
+        @Override
+        public IExpression check(Map<String, Types> localScope) throws TypeError {
+            return this;
+        }
+
+        @Override
+        public Types getType() {
+            return Types.allTypes.get(name); // TODO put in this list on definition
+        }
+    }
+
     public interface IMonadicExpression extends IExpression {
+        @Override
+        default boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        default boolean isValidRight() {
+            return true;
+        }
     }
 
     public static class MonadicExpression implements IMonadicExpression {
@@ -559,7 +642,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (operator instanceof NotMonadicOperator && expression.getType() != Types.BOOLEAN) {
                 throw new TypeError("PosMonadicOperator", expression.getType().toString(), Types.BOOLEAN.toString());
 
@@ -577,6 +660,15 @@ public class AbsSyn {
     }
 
     public interface IDyadicExpression extends IExpression {
+        @Override
+        default boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        default boolean isValidRight() {
+            return true;
+        }
     }
 
     public interface IMultiplicationDyadicExpression extends IDyadicExpression {
@@ -723,6 +815,15 @@ public class AbsSyn {
     }
 
     public interface IRecordAccessExpression extends IExpression {
+        @Override
+        default boolean isValidLeft() {
+            return true;
+        }
+
+        @Override
+        default boolean isValidRight() {
+            return true;
+        }
     }
 
     public static class RecordAccessExpression implements IRecordAccessExpression {
@@ -746,7 +847,7 @@ public class AbsSyn {
     }
 
     public interface ICommand {
-        public ICommand check(Map<String, Types> localScope) throws TypeError;
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError;
     }
 
     public interface ISkipCommand extends ICommand {
@@ -773,11 +874,20 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             l = l.check(localScope);
             r = r.check(localScope);
 
-            return null;
+
+            if (!l.isValidLeft())
+                throw new ContextError(String.format("%s cannot be on the left side of an assignment", l.toString()));
+            if (!r.isValidRight())
+                throw new ContextError(String.format("%s cannot be on the right side of an assignment", r.toString()));
+
+            if (l.getType() != r.getType())
+                throw new TypeError("AssignmentCommand", l.getType().toString(), r.getType().toString());
+
+            return this;
         }
     }
 
@@ -796,8 +906,11 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             condition = condition.check(localScope);
+
+            if (condition.getType() != Types.BOOLEAN)
+                throw new TypeError("IfCommand condition", condition.getType().toString(), Types.BOOLEAN.toString());
 
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -827,8 +940,11 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             condition = condition.check(localScope);
+
+            if (condition.getType() != Types.BOOLEAN)
+                throw new TypeError("WhileCommand", condition.getType().toString(), Types.BOOLEAN.toString());
 
             List<ICommand> newElseCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -845,12 +961,12 @@ public class AbsSyn {
 
     public static class CallCommand implements ICallCommand {
         public String name;
-        public List<IExpression> expressions;
+        public List<IExpression> arguments;
         public List<String> globalInits;
 
-        public CallCommand(String name, List<IExpression> expressions, List<String> globalInits) {
+        public CallCommand(String name, List<IExpression> arguments, List<String> globalInits) {
             this.name = name;
-            this.expressions = expressions;
+            this.arguments = arguments;
             this.globalInits = globalInits;
         }
 
@@ -859,11 +975,11 @@ public class AbsSyn {
             // TODO look up in global proc table
             // TODO match types in args
 
-            List<IExpression> newExprs = new LinkedList<>();
-            for (IExpression e : expressions) {
-                newExprs.add(e.check(localScope));
+            List<IExpression> newArgs = new LinkedList<>();
+            for (IExpression e : arguments) {
+                newArgs.add(e.check(localScope));
             }
-            expressions = newExprs;
+            arguments = newArgs;
 
             // TODO look up global inits
 
@@ -946,7 +1062,6 @@ public class AbsSyn {
                 newCmds.add(c.check(symbolTable));
             }
             commands = newCmds;
-
 
             return this;
         }
