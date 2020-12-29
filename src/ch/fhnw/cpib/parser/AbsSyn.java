@@ -686,7 +686,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (l.getType() != Types.INTEGER) {
                 throw new TypeError("MultiplicationDyadicExpression", l.getType().toString(), Types.INTEGER.toString());
             }
@@ -719,7 +719,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (l.getType() != Types.INTEGER) {
                 throw new TypeError("AdditionDyadicExpression", l.getType().toString(), Types.INTEGER.toString());
             }
@@ -752,7 +752,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
             switch (operator) {
                 case EQ:
                 case NE:
@@ -796,7 +796,7 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (l.getType() != Types.BOOLEAN) {
                 throw new TypeError("RelativeDyadicExpression", l.getType().toString(), Types.BOOLEAN.toString());
             }
@@ -971,7 +971,7 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             // TODO look up in global proc table
             // TODO match types in args
 
@@ -998,7 +998,7 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             expression = expression.check(localScope);
             return this;
         }
@@ -1015,7 +1015,7 @@ public class AbsSyn {
         }
 
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             expression = expression.check(localScope);
             return this;
         }
