@@ -14,7 +14,7 @@ public class Main {
         Test.test(); // Do extensive testing!
 
         String input = "foo while 3+89 while+ foobar+ +while\n";
-        input = Files.readString(Path.of("factorialRec.iml.txt"));
+        input = Files.readString(Path.of("compareVectors.iml.txt"));
         ITokenList tokens = new Scanner(input).scan();
         ConcSyn.IProgram program = new Parser(tokens).parse();
         AbsSyn.IProgram abstractProgram = program.toAbsSyn();

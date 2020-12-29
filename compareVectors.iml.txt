@@ -1,0 +1,27 @@
+program compareVectors()
+global
+    record direction2D(x:int64, y:int64);
+    record vector2D(direction:direction2D, magnitude:int64);
+
+    const direction  : direction2D;
+    const zeroVector : vector2D;
+    var testVector   : vector2D;
+
+    fun directionEquals(d1:direction2D, d2:direction2D) returns const directionsEqual:bool do
+        directionsEqual init := d1.x = d2.x /\? d1.y = d2.y
+    endfun;
+
+    fun vectorEquals(v1:vector2D, v2:vector2D) returns const vectorsEqual:bool do
+        vectorsEqual init := directionEquals(v1.direction, v2.direction) /\? v1.magnitude = v2.magnitude
+    endfun
+do
+    direction  init := direction2D(1, 1);
+    zeroVector init := vector2D(direction, 0);
+    testVector init := vector2D(direction, 2);
+
+    debugout vectorEquals(zeroVector, testVector); // Expect false
+
+    testVector.magnitude := 0;
+
+    debugout vectorEquals(zeroVector, testVector) // Expect true
+endprogram

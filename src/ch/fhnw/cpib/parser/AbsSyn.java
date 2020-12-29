@@ -844,11 +844,11 @@ public class AbsSyn {
     }
 
     public static class RecordAccessExpression implements IRecordAccessExpression {
-        public String recordName;
+        public String variableName;
         public List<String> fieldNames;
 
-        public RecordAccessExpression(String recordName, List<String> fieldNames) {
-            this.recordName = recordName;
+        public RecordAccessExpression(String variableName, List<String> fieldNames) {
+            this.variableName = variableName;
             this.fieldNames = fieldNames;
         }
 
@@ -860,9 +860,21 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, Types> localScope) throws ContextError {
+        public Types getType(Map<String, Types> localScope) throws ContextError, TypeError {
+            var type = localScope.get(variableName);
+            if (type == null) {
+                throw new ContextError("Couldn't find record " + variableName + " in " + localScope.toString());
+            }
+
+            if (!type.getType().equals("Record")) {
+                throw new TypeError("RecordAccessExpression", type.getType(), "Record");
+            }
+            var recordName = type.getRecordName();
             var record = recordMap.get(recordName);
-            Types type = null;
+            if (record == null) {
+                throw new ContextError("Couldn't find record " + recordName + " in " + recordMap.toString());
+            }
+            Types finalType = null;
             for (String field : fieldNames) {
                 var fieldOpt = record.fields.stream().filter(f -> f.name.equals(field)).findFirst();
                 if (fieldOpt.isEmpty()) {
