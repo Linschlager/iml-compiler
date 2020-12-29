@@ -18,7 +18,7 @@ public class Main {
         ITokenList tokens = new Scanner(input).scan();
         ConcSyn.IProgram program = new Parser(tokens).parse();
         AbsSyn.IProgram abstractProgram = program.toAbsSyn();
-
+        AbsSyn.IProgram validatedAbstractProgram = abstractProgram.check();
 
     }
 }

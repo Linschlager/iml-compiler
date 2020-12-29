@@ -44,7 +44,9 @@ public class ConcSyn {
     }
     static class OptFlowmodeEpsilon implements IOptFlowmode {
         @Override
-        public AbsSyn.IFlowMode toAbsSyn() {return null;}
+        public AbsSyn.IFlowMode toAbsSyn() {
+            return new AbsSyn.InFlowMode(); // Default FlowMode
+        }
     }
 
     interface IOptMechmode {
@@ -63,7 +65,9 @@ public class ConcSyn {
     }
     static class OptMechmodeEpsilon implements IOptMechmode {
         @Override
-        public AbsSyn.IMechMode toAbsSyn() {return null;}
+        public AbsSyn.IMechMode toAbsSyn() {
+            return new AbsSyn.CopyMechMode(); // Default MechMode
+        }
     }
 
     interface IOptChangemode {
@@ -82,7 +86,9 @@ public class ConcSyn {
     }
     static class OptChangemodeEpsilon implements IOptChangemode {
         @Override
-        public AbsSyn.IChangeMode toAbsSyn() {return null;}
+        public AbsSyn.IChangeMode toAbsSyn() {
+            return new AbsSyn.ConstChangeMode(); // Default ChangeMode
+        }
     }
 
     interface ITypedIdent {
