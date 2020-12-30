@@ -280,7 +280,7 @@ public class AbsSyn {
                 throw new ContextError("Function " + name + " cannot be declared, there is a record of that name.");
             }
 
-            Map<String, Types> symbolTable = new HashMap<>(localScope);
+            Map<String, Types> symbolTable = new HashMap<>();
 
             // Register function before checking commands to allow for recursion
             List<ProcedureArgument> args = new LinkedList<>();
@@ -380,7 +380,7 @@ public class AbsSyn {
             procedureMap.put(name, new ProcedureSignature(args));
 
             // Construct symbolTable
-            Map<String, Types> symbolTable = new HashMap<>(localScope);
+            Map<String, Types> symbolTable = new HashMap<>();
 
             for (IParameter iParameter : parameters) {
                 var p = (Parameter) iParameter.check(symbolTable);
@@ -639,9 +639,7 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-
-
-
+            
             var desiredArguments = recordMap.get(name).fields;
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(localScope);

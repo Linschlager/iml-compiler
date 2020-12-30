@@ -1,4 +1,4 @@
-program compareVectors()
+program compareVectors(something: int64)
 global
     record point (x:int64, y:int64);
     record rectangle (location: point, width: int64, length: int64);
@@ -50,5 +50,5 @@ global
         volume init := calculateArea(cube.base) * cube.height
     endfun
 do
-    debugout 1
+    debugout something
 endprogram
