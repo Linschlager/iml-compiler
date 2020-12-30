@@ -10,6 +10,7 @@ global
     fun abs (num: int64) returns const absNum: int64 do
         if num < 0 then absNum init := -num
         else absNum init := num
+        endif
     endfun;
 
     // Helper function to approximate the sqrt using newton's method. Will not be very good due to rounding: https://en.wikipedia.org/wiki/Newton%27s_method
@@ -34,7 +35,7 @@ global
     do
         xDist init := abs(p1.x - p2.x);
         yDist init := abs(p1.y - p2.y);
-        directionsEqual init := sqrt(xDist * xDist + yDist * yDist)
+        distance init := sqrt(xDist * xDist + yDist * yDist)
     endfun;
 
     // Calculates the area of a rectangle
@@ -49,5 +50,5 @@ global
         volume init := calculateArea(cube.base) * cube.height
     endfun
 do
-
+    debugout 1
 endprogram

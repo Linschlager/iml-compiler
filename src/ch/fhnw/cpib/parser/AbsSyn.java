@@ -57,8 +57,8 @@ public class AbsSyn {
         }
     }
 
-    private static final Map<String, ProcedureSignature> procedureMap;
-    private static final Map<String, RecordSignature> recordMap;
+    private static Map<String, ProcedureSignature> procedureMap;
+    private static Map<String, RecordSignature> recordMap;
 
     static {
         procedureMap = new HashMap<>();
@@ -1106,6 +1106,9 @@ public class AbsSyn {
 
         @Override
         public IProgram check() throws TypeError, ContextError {
+            procedureMap = new HashMap<>();
+            recordMap = new HashMap<>();
+
 
             Map<String, Types> symbolTable = new HashMap<>();
 

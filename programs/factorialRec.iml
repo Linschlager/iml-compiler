@@ -8,5 +8,5 @@ global
   endfun
 do
   debugin n init;
-  debugout factorial(false)
+  debugout factorial(10)
 endprogram
