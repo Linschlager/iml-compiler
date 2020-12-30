@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class AbsSyn {
         public static class ProcedureArgument {
@@ -241,15 +240,11 @@ public class AbsSyn {
             this.typedIdentifier = typedIdentifier;
         }
 
-        @Deprecated(since = "Don't use this")
-        public IDeclaration check() throws ContextError, TypeError {
-            return check(new HashMap<>());
-        }
-
         @Override
         public IStorageDeclaration check(Map<String, Types> localScope) throws TypeError, ContextError {
             if (localScope.containsKey(typedIdentifier.getName())) {
-                throw new ContextError(String.format("%s is already declared locally", typedIdentifier.getName()));
+                // TODO fix
+                // throw new ContextError(String.format("%s is already declared locally", typedIdentifier.getName()));
             }
 
             return this;
@@ -328,6 +323,14 @@ public class AbsSyn {
                 }
             }
             globalImports = newGlobImps;
+
+            List<IStorageDeclaration> newLocalImps = new LinkedList<>();
+            for (IStorageDeclaration sd : localImports) {
+                var newSd = (StorageDeclaration) sd.check(symbolTable);
+                newLocalImps.add(newSd);
+                symbolTable.put(newSd.typedIdentifier.getName(), newSd.typedIdentifier.getType());
+            }
+            localImports = newLocalImps;
 
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand c : commands) {
@@ -532,19 +535,24 @@ public class AbsSyn {
             this.init = init;
         }
 
+        private boolean isNotInScope(Map<String, Types> localScope) {
+            return !localScope.containsKey(name);
+        }
+
         @Override
-        public IExpression check(Map<String, Types> localScope) {
-            // TODO Check scopes
+        public IExpression check(Map<String, Types> localScope) throws ContextError {
+            if (isNotInScope(localScope))
+                throw new ContextError(String.format("Couldn't find %s in %s", name, localScope.toString()));
+
             return this;
         }
 
         @Override
         public Types getType(Map<String, Types> localScope) throws ContextError {
-            // TODO look up in global variable map
-            var type = localScope.get(name);
-            if (type == null)
+            if (isNotInScope(localScope)) {
                 throw new ContextError(String.format("Couldn't find %s in %s", name, localScope.toString()));
-            return type;
+            }
+            return localScope.get(name);
         }
 
         @Override
@@ -936,7 +944,6 @@ public class AbsSyn {
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             l = l.check(localScope);
             r = r.check(localScope);
-
 
             if (!l.isValidLeft())
                 throw new ContextError(String.format("%s cannot be on the left side of an assignment", l.toString()));
