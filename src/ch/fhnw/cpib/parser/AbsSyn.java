@@ -58,7 +58,6 @@ public class AbsSyn {
         }
     }
 
-
     private static final Map<String, ProcedureSignature> procedureMap;
     private static final Map<String, RecordSignature> recordMap;
 
@@ -286,6 +285,8 @@ public class AbsSyn {
                 throw new ContextError("Function " + name + " cannot be declared, there is a record of that name.");
             }
 
+            Map<String, Types> symbolTable = new HashMap<>(localScope);
+
             // Register function before checking commands to allow for recursion
             List<ProcedureArgument> args = new LinkedList<>();
             for (IParameter iParameter : parameterList) {
@@ -302,17 +303,18 @@ public class AbsSyn {
                 } else {
                     m = AccessMode.DIRECT;
                 }
+                String n = param.typedIdentifier.getName();
                 Types t = param.typedIdentifier.getType();
 
+                symbolTable.put(n, t); // Add parameter to scope
                 args.add(new ProcedureArgument(t, m, s));
+
             }
             returnValue = (StorageDeclaration) returnValue.check(localScope);
             var returns = ((StorageDeclaration)returnValue).typedIdentifier;
             FunctionSignature signature = new FunctionSignature(args, returns.getType());
             // Register function signature
             procedureMap.put(name, signature);
-
-            Map<String, Types> symbolTable = new HashMap<>(localScope);
             // TODO global imports
 
             symbolTable.put(returns.getName(), returns.getType());
@@ -419,9 +421,11 @@ public class AbsSyn {
                 throw new ContextError("Record " + name + " cannot be declared, there is already a procedure of that name");
             }
 
-            List<RecordField> f = fields.stream().map(ti ->
-                    new RecordField(ti.getName(), ti.getType())).collect(Collectors.toList()
-            );
+            List<RecordField> f = new LinkedList<>();
+            for (ITypedIdentifier ti : fields) {
+                var newField = new RecordField(ti.getName(), ti.getType());
+                f.add(newField);
+            }
             RecordSignature recordSignature = new RecordSignature(f);
             recordMap.put(name, recordSignature);
 
@@ -626,8 +630,18 @@ public class AbsSyn {
         }
 
         @Override
-        public IExpression check(Map<String, Types> localScope) throws TypeError {
-            // TODO check args
+        public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
+
+
+
+            var desiredArguments = recordMap.get(name).fields;
+            for (int i = 0; i < arguments.size(); i++) {
+                var actualType = arguments.get(i).getType(localScope);
+                var desiredType = desiredArguments.get(i).type;
+                if (desiredType != actualType)
+                    throw new TypeError("RecordCallExpression", actualType.toString(), desiredType.toString());
+            }
+
             return this;
         }
 
@@ -883,12 +897,11 @@ public class AbsSyn {
                 var nextField = fieldOpt.get();
                 if (nextField.type.getRecordName() != null) {
                     record = recordMap.get(nextField.type.getRecordName());
-                } else {
-                    type = nextField.type;
                 }
+                finalType = nextField.type;
             }
-            if (type == null) throw new ContextError("Invalid record");
-            return type;
+            if (finalType == null) throw new ContextError("Couldn't resolve fields in record");
+            return finalType;
         }
     }
 
