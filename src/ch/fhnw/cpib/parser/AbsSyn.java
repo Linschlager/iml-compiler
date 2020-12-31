@@ -1,11 +1,15 @@
 package ch.fhnw.cpib.parser;
 
+import ch.fhnw.cpib.codeGen.Environment;
 import ch.fhnw.cpib.checks.AccessMode;
 import ch.fhnw.cpib.checks.Scope;
 import ch.fhnw.cpib.checks.Types;
 import ch.fhnw.cpib.exceptions.ContextError;
 import ch.fhnw.cpib.exceptions.TypeError;
 import ch.fhnw.cpib.lexer.tokens.*;
+import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray.CodeTooSmallError;
+import ch.fhnw.lederer.virtualmachineFS2015.IInstructions;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -13,6 +17,20 @@ import java.util.List;
 import java.util.Map;
 
 public class AbsSyn {
+
+    interface IAbsSynNode {
+
+        /**
+         * Creates the code in the VM and returns the new location.
+         *
+         * @throws CodeTooSmallError
+         *           Thrown when the code segment of the VM is full.
+         */
+        default int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            // todo remove this default impl and check all missing implementations (maybe they dont need to implement this interface?)
+            throw new RuntimeException("Not yet implemented");
+        }
+    }
 
     public static class ProcedureArgument {
         public Types type;
@@ -69,7 +87,6 @@ public class AbsSyn {
     public interface IType {
         public Types convertType();
     }
-
     public static class TraditionalType implements IType {
         public Type type;
 
@@ -113,7 +130,6 @@ public class AbsSyn {
 
     public static class CopyMechMode implements IMechMode {
     }
-
     public static class RefMechMode implements IMechMode {
     }
 
@@ -131,7 +147,6 @@ public class AbsSyn {
 
         public Types getType();
     }
-
     public static class TypedIdentifier implements ITypedIdentifier {
         public String name;
         public IType type;
@@ -457,14 +472,12 @@ public class AbsSyn {
         public boolean isValidLeft();
 
         public boolean isValidRight();
-    }
 
-    public interface ILiteralExpression extends IExpression {
+        int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
+        int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
     }
-
-    public interface IBoolLiteralExpression extends ILiteralExpression {
-    }
-
+    public interface ILiteralExpression extends IExpression {}
+    public interface IBoolLiteralExpression extends ILiteralExpression {}
     public static class BoolLiteralExpression implements IBoolLiteralExpression {
         public boolean value;
 
@@ -490,6 +503,17 @@ public class AbsSyn {
         @Override
         public boolean isValidRight() {
             return true;
+        }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) {
+            throw new RuntimeException("boolean literal cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            codeArray.put(location++, new IInstructions.LoadImInt(value ? 1 : 0));
+            return location;
         }
     }
 
@@ -521,6 +545,17 @@ public class AbsSyn {
         @Override
         public boolean isValidRight() {
             return true;
+        }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("int literal cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            codeArray.put(location++, new IInstructions.LoadImInt(Integer.parseInt(value)));
+            return location;
         }
     }
 
@@ -564,6 +599,30 @@ public class AbsSyn {
         @Override
         public boolean isValidRight() {
             return !init;
+        }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            Environment.IdentifierInfo info = env.getIdentifierInfo(name);
+            if (!info.isLocalScope && info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadImInt(info.addr));
+            } else if (info.isLocalScope && info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
+            } else if (info.isLocalScope && !info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
+                codeArray.put(location++, new IInstructions.Deref());
+            } else {
+                throw new RuntimeException("invalid identifier info found for var: " + name);
+            }
+
+            return location;
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = codeLValue(codeArray, location, env);
+            codeArray.put(location++, new IInstructions.Deref());
+            return location;
         }
     }
 
@@ -626,6 +685,16 @@ public class AbsSyn {
             }
             throw new TypeError("FunctionCallExpression", "Procedure", "Function");
         }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("FunctionCallExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("Not yet implemented");
+        }
     }
 
     // Only returned in static analysis of FunctionCallExpression
@@ -640,7 +709,7 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, Types> localScope) throws TypeError, ContextError {
-            
+
             var desiredArguments = recordMap.get(name).fields;
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(localScope);
@@ -656,6 +725,17 @@ public class AbsSyn {
         public Types getType(Map<String, Types> localScope) {
             return Types.allTypes.get(name);
         }
+
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("FunctionCallExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("Not yet implemented");
+        }
     }
 
     public interface IMonadicExpression extends IExpression {
@@ -669,7 +749,6 @@ public class AbsSyn {
             return true;
         }
     }
-
     public static class MonadicExpression implements IMonadicExpression {
         public IMonadicOperator operator;
         public IExpression expression;
@@ -695,7 +774,28 @@ public class AbsSyn {
         public Types getType(Map<String, Types> localScope) throws TypeError, ContextError {
             return expression.getType(localScope);
         }
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("MonadicExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            if (operator instanceof NotMonadicOperator) {
+                codeArray.put(location++, new IInstructions.LoadImInt(1));
+                location = expression.codeRValue(codeArray, location, env); // assumed condition: this expression evaluates to a boolean
+                codeArray.put(location++, new IInstructions.SubInt()); // 1 - boolean = !boolean
+            } else if (operator instanceof PosMonadicOperator) {
+                location = expression.codeRValue(codeArray, location, env);
+                // todo do we need to do anything?
+            } else {
+                throw new RuntimeException("Invalid operator");
+            }
+
+            return location;
+        }
     }
+
 
     public interface IDyadicExpression extends IExpression {
         @Override
@@ -707,11 +807,7 @@ public class AbsSyn {
         default boolean isValidRight() {
             return true;
         }
-    }
-
-    public interface IMultiplicationDyadicExpression extends IDyadicExpression {
-    }
-
+    }public interface IMultiplicationDyadicExpression extends IDyadicExpression {}
     public static class MultiplicationDyadicExpression implements IMultiplicationDyadicExpression {
         public MultOpr.Attr operator;
         public IExpression l;
@@ -739,6 +835,25 @@ public class AbsSyn {
         @Override
         public Types getType(Map<String, Types> localScope) {
             return Types.INTEGER;
+        }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("MultiplicationDyadicExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = l.codeRValue(codeArray, location, env);
+            location = r.codeRValue(codeArray, location, env);
+            switch (operator) {
+                case TIMES -> codeArray.put(location++, new IInstructions.MultInt());
+                case DIV_T -> codeArray.put(location++, new IInstructions.DivTruncInt());
+                case MOD_T -> codeArray.put(location++, new IInstructions.ModTruncInt());
+                default -> throw new RuntimeException("NOT yet implemented:" + operator);
+            }
+
+            return location;
         }
     }
 
@@ -772,6 +887,23 @@ public class AbsSyn {
         @Override
         public Types getType(Map<String, Types> localScope) {
             return Types.INTEGER;
+        }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("AdditionDyadicExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = l.codeRValue(codeArray, location, env);
+            location = r.codeRValue(codeArray, location, env);
+            switch (operator) {
+                case PLUS -> codeArray.put(location++, new IInstructions.AddInt());
+                case MINUS -> codeArray.put(location++, new IInstructions.SubInt());
+            }
+
+            return location;
         }
     }
 
@@ -817,6 +949,27 @@ public class AbsSyn {
         public Types getType(Map<String, Types> localScope) {
             return Types.BOOLEAN;
         }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("RelativeDyadicExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = l.codeRValue(codeArray, location, env);
+            location = r.codeRValue(codeArray, location, env);
+
+            switch (operator) {
+                case EQ -> codeArray.put(location++, new IInstructions.EqInt());
+                case GE -> codeArray.put(location++, new IInstructions.GeInt());
+                case GT -> codeArray.put(location++, new IInstructions.GtInt());
+                case LE -> codeArray.put(location++, new IInstructions.LeInt());
+                case LT -> codeArray.put(location++, new IInstructions.LtInt());
+                case NE -> codeArray.put(location++, new IInstructions.NeInt());
+            }
+            return location;
+        }
     }
 
     public interface IBoolDyadicExpression extends IDyadicExpression {
@@ -850,6 +1003,18 @@ public class AbsSyn {
         public Types getType(Map<String, Types> localScope) {
             return Types.BOOLEAN;
         }
+
+        @Override
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("BoolDyadicExpression cant be used as l-value");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            // todo conditional evaluation
+            // implement with conditional jumps to after all expressions, and evaluate current boolean result continuously
+            throw new RuntimeException("Not yet implemented");
+        }
     }
 
     public interface IRecordAccessExpression extends IExpression {
@@ -863,7 +1028,6 @@ public class AbsSyn {
             return true;
         }
     }
-
     public static class RecordAccessExpression implements IRecordAccessExpression {
         public String variableName;
         public List<String> fieldNames;
@@ -910,26 +1074,31 @@ public class AbsSyn {
             if (finalType == null) throw new ContextError("Couldn't resolve fields in record");
             return finalType;
         }
-    }
 
-    public interface ICommand {
-        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError;
-    }
-
-    public interface ISkipCommand extends ICommand {
-    }
-
-    public static class SkipCommand implements ISkipCommand {
         @Override
-        public ICommand check(Map<String, Types> localScope) throws TypeError {
-            // No scope checking required.
-            return this;
+        public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            throw new RuntimeException("Not yet implemented");
+        }
+
+        @Override
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = codeLValue(codeArray, location, env);
+            codeArray.put(location++, new IInstructions.Deref());
+            return location;
         }
     }
 
-    public interface IAssignmentCommand extends ICommand {
+    public interface ICommand extends IAbsSynNode  {
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError;
     }
-
+    public interface ISkipCommand extends ICommand {}
+    public static class SkipCommand implements ISkipCommand {
+        @Override
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
+            return this;
+        }
+    }
+    public interface IAssignmentCommand extends ICommand {}
     public static class AssignmentCommand implements IAssignmentCommand {
         public IExpression l;
         public IExpression r;
@@ -953,6 +1122,15 @@ public class AbsSyn {
                 throw new TypeError("AssignmentCommand", l.getType(localScope).toString(), r.getType(localScope).toString());
 
             return this;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = l.codeLValue(codeArray, location, env);
+            location = r.codeRValue(codeArray, location, env);
+            codeArray.put(location++, new IInstructions.Store());
+
+            return location;
         }
     }
 
@@ -990,6 +1168,25 @@ public class AbsSyn {
             elseCommands = newElseCmds;
             return this;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = condition.codeRValue(codeArray, location, env);
+            int jumpLocation = location++;
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
+            int afterIfBodyJumpLocation = location++;
+            int elseBodyStartLocation = location;
+            for (ICommand command : elseCommands) {
+                location = command.code(codeArray, location, env);
+            }
+            int afterElseBodyLocation = location;
+
+            codeArray.put(jumpLocation, new IInstructions.CondJump(elseBodyStartLocation));
+            codeArray.put(afterIfBodyJumpLocation, new IInstructions.UncondJump(afterElseBodyLocation));
+            return location;
+        }
     }
 
     public interface IWhileCommand extends ICommand {
@@ -1018,6 +1215,21 @@ public class AbsSyn {
             commands = newElseCmds;
 
             return this;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            int conditionLocation = location;
+            location = condition.codeRValue(codeArray, location, env);
+            int jumpLocation = location++;
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
+            codeArray.put(location++, new IInstructions.UncondJump(conditionLocation));
+            int afterBodyLocation = location;
+            codeArray.put(jumpLocation, new IInstructions.CondJump(afterBodyLocation));
+
+            return location;
         }
     }
 
@@ -1081,6 +1293,14 @@ public class AbsSyn {
             }
             return this;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = expression.codeLValue(codeArray, location, env);
+            // todo differentiate between bool and int expressions, and maybe add better label for input
+            codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
+            return location;
+        }
     }
 
     public interface IDebugOutCommand extends ICommand {
@@ -1101,12 +1321,19 @@ public class AbsSyn {
             }
             return this;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            location = expression.codeRValue(codeArray, location, env);
+            // todo differentiate between bool and int expressions, and maybe add better label for input
+            codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+            return location;
+        }
     }
 
-    public interface IProgram {
+    public interface IProgram extends IAbsSynNode  {
         public IProgram check() throws TypeError, ContextError;
     }
-
     public static class Program implements IProgram {
         public String name;
         public List<IProgramParameter> programParameters;
@@ -1153,6 +1380,29 @@ public class AbsSyn {
             commands = newCmds;
 
             return this;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+            if (!programParameters.isEmpty()) throw new RuntimeException("program params are not yet implemented");
+
+            for (IDeclaration declaration : globalDeclarations) {
+                if (declaration instanceof StorageDeclaration) {
+                    //StorageDeclaration storageDeclaration = (StorageDeclaration) declaration;
+                    codeArray.put(location++, new IInstructions.AllocBlock(1));
+                    // todo maybe sum up all store decls and produce only one allocBlock instruction?
+                } else {
+                    // todo, maybe we can ignore some other declarations (like record shape) as they produce no code?
+                    throw new RuntimeException("Global declaration not yet implemented:" + declaration.getClass().getSimpleName());
+                }
+            }
+
+            for (ICommand command : commands) {
+                location = command.code(codeArray, location, env);
+            }
+            codeArray.put(location++, new IInstructions.Stop());
+
+            return location;
         }
     }
 }

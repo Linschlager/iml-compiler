@@ -1,5 +1,6 @@
 package ch.fhnw.cpib;
 
+import ch.fhnw.cpib.codeGen.Environment;
 import ch.fhnw.cpib.exceptions.ContextError;
 import ch.fhnw.cpib.exceptions.GrammarError;
 import ch.fhnw.cpib.exceptions.LexicalError;
@@ -9,6 +10,10 @@ import ch.fhnw.cpib.lexer.Scanner;
 import ch.fhnw.cpib.parser.AbsSyn;
 import ch.fhnw.cpib.parser.ConcSyn;
 import ch.fhnw.cpib.parser.Parser;
+import ch.fhnw.lederer.virtualmachineFS2015.CodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.IVirtualMachine;
+import ch.fhnw.lederer.virtualmachineFS2015.VirtualMachine;
 
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -18,7 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Main {
-    private static AbsSyn.IProgram compile(String[] input) {
+    private static ICodeArray compile(String[] input) {
         var fileName = input[0];
         var programCode = input[1];
         try {
@@ -27,8 +32,21 @@ public class Main {
             AbsSyn.IProgram abstractProgram = program.toAbsSyn();
             AbsSyn.IProgram validatedAbstractProgram = abstractProgram.check();
 
-            return validatedAbstractProgram;
-        } catch (GrammarError | LexicalError | ContextError | TypeError e) {
+            ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
+            abstractProgram.code(codeArray, 0, new Environment() {
+                @Override
+                public IdentifierInfo getIdentifierInfo(String ident) {
+                    return switch (ident) {
+                        case "x" -> new IdentifierInfo(0, false, true);
+                        case "y" -> new IdentifierInfo(1, false, true);
+                        default -> throw new IllegalStateException("Unexpected value: " + ident);
+                    };
+                }
+            });
+            codeArray.resize();
+
+            return codeArray;
+        } catch (GrammarError | LexicalError | ContextError | TypeError | ICodeArray.CodeTooSmallError e) {
             System.out.printf("Error compiling '%s'%n", fileName);
             e.printStackTrace();
         }
@@ -53,6 +71,8 @@ public class Main {
             }
         }
 
-        allPrograms.stream().map(Main::compile).collect(Collectors.toList());
+        List<ICodeArray> codeArrays = allPrograms.stream().map(Main::compile).collect(Collectors.toList());
+
+        //new VirtualMachine(codeArray, 100_000);
     }
 }

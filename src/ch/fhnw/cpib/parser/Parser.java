@@ -442,10 +442,7 @@ public class Parser implements IParser {
         if (token.terminal == Terminal.SEMICOLON) {
             consume(Terminal.SEMICOLON);
             return cpsCmd();
-        } else if (List.of(
-                Terminal.ENDWHILE,
-                Terminal.ENDIF,
-                Terminal.ELSE,
+        } else if (List.of(Terminal.ENDWHILE, Terminal.ENDIF, Terminal.ELSE,
                 Terminal.ENDPROC,
                 Terminal.ENDFUN,
                 Terminal.ENDPROGRAM).contains(token.terminal)) {
