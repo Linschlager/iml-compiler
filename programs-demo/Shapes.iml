@@ -1,0 +1,54 @@
+program compareVectors(something: int64)
+global
+    record point (x:int64, y:int64);
+    record rectangle (location: point, width: int64, length: int64);
+    record cube (location: point, base: rectangle, height: int64) ;
+
+    // TODO add test vars for shapes
+
+    // Helper function to calculate the absolute value of a number
+    fun abs (num: int64) returns const absNum: int64 do
+        if num < 0 then absNum init := -num
+        else absNum init := num
+        endif
+    endfun;
+
+    // Helper function to approximate the sqrt using newton's method. Will not be very good due to rounding: https://en.wikipedia.org/wiki/Newton%27s_method
+    fun sqrt (num: int64) returns const s:int64
+    local x0: int64; x1: int64; i: int32 do
+        i init := 0;
+        x0 init := 1;
+        x1 init := x0;
+
+        while i < 2 do // Could be improved with more iterations, not sure how it behaves with the rounding!
+            i := i + 1;
+            x1 := (x0 - (x0 * x0 - abs(num))) divF (2 * x0);
+            x0 := x1
+        endwhile;
+
+        s init := x1
+    endfun;
+
+    // Calculates the distance between two points
+    fun calculateDistance(p1: point, p2: point) returns const distance:int64
+    local xDist: int64; yDist: int64
+    do
+        xDist init := abs(p1.x - p2.x);
+        yDist init := abs(p1.y - p2.y);
+        distance init := sqrt(xDist * xDist + yDist * yDist)
+    endfun;
+
+    // Calculates the area of a rectangle
+    fun calculateArea(rect: rectangle) returns const area: int64
+    do
+        area init := rect.width * rect.length
+    endfun;
+
+    // Calculates the volume of a cube
+    fun calculateVolume(cube: cube) returns const volume: int64
+    do
+        volume init := calculateArea(cube.base) * cube.height
+    endfun
+do
+    debugout something
+endprogram

@@ -1,0 +1,91 @@
+// BasicIML V01
+// Edgar F.A. Lederer, FHNW
+// 2017, December 2018
+// November 2020
+
+program EuclidExtNat
+  (in a:int1024, in b:int1024,
+   out g:int1024,
+   out u:int1024, out v:int1024,
+   out u':int1024, out v':int1024,
+   out sign:int32, out numIt:int32, out certificate:bool)
+global
+  fun abs(x:int1024) returns y:int1024
+    //ensures x >= 0 ==> y = x /\? x <= 0 ==> y = -x
+  do
+    if x >= 0 then y init := x else y init := -x endif
+  endfun;
+
+  fun gcd(x:int1024, y:int1024) returns g:int1024
+    //requires 0 <= x /\? 0 <= y
+  do
+    if y = 0 then g init := x else g init := gcd(y, x modE y) endif
+  endfun;
+
+  proc euclidExtNat
+    (in copy const a:int1024, in copy const b:int1024,
+     out copy var g:int1024,
+     out copy var u:int1024, out copy var v:int1024,
+     out copy var u':int1024, out copy var v':int1024,
+     out copy var sign:int32, out var numIt:int32)
+    //requires 0 <= a /\? 0 <= b;
+    //ensures 0 <= g = gcd(a, b);
+    //ensures abs(sign) = 1;
+    //ensures -sign * u' * g = b; // Pu'
+    //ensures +sign * v' * g = a; // Pv'
+    //ensures u  * a + v  * b = g; // Puv
+    //ensures u' * a + v' * b = 0; // Pu'v'
+    //ensures u * v' - u' * v = sign; // Psign
+    //ensures numIt >= 0
+  local
+    var g':int1024 ; var q:int1024
+  do
+    g init := a ; g' init := b ;
+    u init := 1 ; u' init := 0 ;
+    v init := 0 ; v' init := 1 ;
+    sign init := +1 ;
+    numIt init := 0 ;
+    //debugout gcd(g, g') ;
+    q init := 0 ; // local
+    while g' > 0
+      //invar 0 <= g /\? 0 <= g';
+      //invar gcd(g, g') = gcd(a, b);
+      //invar abs(sign) = 1;
+      //invar -sign * u' * g + sign * u * g' = b;
+      //invar +sign * v' * g - sign * v * g' = a;
+      //invar u  * a + v  * b = g;
+      //invar u' * a + v' * b = g';
+      //invar u * v' - u' * v = sign;
+      //invar numIt >= 0
+    do
+      q := g divE g' ;
+      //debugout q;
+      g := g - q * g'  ; u := u - q * u'  ; v := v - q * v' ;
+      call swap(g, g') ; call swap(u, u') ; call swap(v, v') ;
+      sign := -sign ;
+      numIt := numIt + 1// ;
+      //debugout gcd(g, g')
+    endwhile
+  endproc;
+
+  proc swap(inout ref var x:int1024, inout ref var y:int1024)
+  local const h:int1024
+  do h init := x ; x := y ; y := h endproc;
+
+  // Function certificate returning true is a proof that g is indeed
+  // the greatest common divisor of a and b.
+  // However, computing u * a + v * b might produce an arithmetic overflow.
+  fun certificate(a:int1024, b:int1024,
+    g:int1024, u:int1024, v:int1024, u':int1024, v':int1024, sign:int32)
+      returns c:bool
+  do
+    c init := -sign * u' * g = b /\?
+              +sign * v' * g = a /\?
+              u * a + v * b = g
+  endfun
+do
+  call euclidExtNat
+    (a, b,
+     g init, u init, v init, u' init, v' init, sign init, numIt init) ;
+  certificate init := certificate(a, b, g, u, v, u', v', sign)
+endprogram
