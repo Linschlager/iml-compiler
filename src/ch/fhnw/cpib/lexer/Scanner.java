@@ -11,7 +11,7 @@ public class Scanner implements IScanner {
     private final CharSequence input;
 
     public Scanner(CharSequence input) {
-        this.input = input;
+        this.input = input + " "; // Safeguard
     }
 
     public ITokenList scan() throws LexicalError {
@@ -69,7 +69,7 @@ public class Scanner implements IScanner {
                     }
                     break;
                 case 1:
-                    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || Character.isDigit(c) || c == '_') {
+                    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || Character.isDigit(c) || c == '_' || c == '\'') {
                         lexAccu.append(c);
                     } else {
                         state = 0;
@@ -81,8 +81,9 @@ public class Scanner implements IScanner {
                 case 2:
                     if (Character.isDigit(c)) {
                         numAccu.append(c);
-
-                        // if (numAccu > Integer.MAX_VALUE) throw new LexicalError("IntegerLiteral too large at position " + i + "!");
+                    // if (numAccu > Integer.MAX_VALUE) throw new LexicalError("IntegerLiteral too large at position " + i + "!");
+                    } else if (c == '\'' || Character.isWhitespace(c)) {
+                        continue; // ' can be used to delimit numbers. Numbers can be multiline
                     } else {
                         state = 0;
                         i--;

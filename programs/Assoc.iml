@@ -1,0 +1,20 @@
+program Assoc()
+  global x:int32
+do
+  debugin x init ;
+
+  debugout x - (x - x) ;
+  debugout (x - x) - x ;
+  debugout x - x - x // - is defined to be left-associative
+  ;
+
+  debugout (((x)));
+
+  debugout x divE (x divE 2) ;
+  debugout (x divE x) divE 2 ;
+  debugout x divE x divE 2 // divE is defined to be left-associative
+  ;
+  debugout x divE (2 divE 2) ;
+  debugout (x divE 2) divE 2 ;
+  debugout x divE 2 divE 2
+endprogram
