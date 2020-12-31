@@ -12,6 +12,7 @@ import ch.fhnw.cpib.parser.ConcSyn;
 import ch.fhnw.cpib.parser.Parser;
 import ch.fhnw.lederer.virtualmachineFS2015.CodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
+import ch.fhnw.lederer.virtualmachineFS2015.IVirtualMachine;
 import ch.fhnw.lederer.virtualmachineFS2015.VirtualMachine;
 
 import java.nio.file.DirectoryStream;
@@ -22,7 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class Main {
-    private static AbsSyn.IProgram compile(String[] input) {
+    private static ICodeArray compile(String[] input) {
         var fileName = input[0];
         var programCode = input[1];
         try {
@@ -43,10 +44,9 @@ public class Main {
                 }
             });
             codeArray.resize();
-            new VirtualMachine(codeArray, 100_000);
 
-            return validatedAbstractProgram;
-        } catch (GrammarError | LexicalError | ContextError | TypeError e) {
+            return codeArray;
+        } catch (GrammarError | LexicalError | ContextError | TypeError | ICodeArray.CodeTooSmallError e) {
             System.out.printf("Error compiling '%s'%n", fileName);
             e.printStackTrace();
         }
@@ -71,6 +71,8 @@ public class Main {
             }
         }
 
-        allPrograms.stream().map(Main::compile).collect(Collectors.toList());
+        List<ICodeArray> codeArrays = allPrograms.stream().map(Main::compile).collect(Collectors.toList());
+
+        //new VirtualMachine(codeArray, 100_000);
     }
 }

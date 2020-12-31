@@ -738,7 +738,17 @@ public class AbsSyn {
         }
     }
 
-    public interface IMonadicExpression extends IExpression {}
+    public interface IMonadicExpression extends IExpression {
+        @Override
+        default boolean isValidLeft() {
+            return false;
+        }
+
+        @Override
+        default boolean isValidRight() {
+            return true;
+        }
+    }
     public static class MonadicExpression implements IMonadicExpression {
         public IMonadicOperator operator;
         public IExpression expression;
@@ -1082,7 +1092,12 @@ public class AbsSyn {
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError;
     }
     public interface ISkipCommand extends ICommand {}
-    public static class SkipCommand implements ISkipCommand {}
+    public static class SkipCommand implements ISkipCommand {
+        @Override
+        public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
+            return this;
+        }
+    }
     public interface IAssignmentCommand extends ICommand {}
     public static class AssignmentCommand implements IAssignmentCommand {
         public IExpression l;
