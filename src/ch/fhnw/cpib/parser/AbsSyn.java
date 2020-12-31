@@ -13,7 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 public class AbsSyn {
-        public static class ProcedureArgument {
+
+    public static class ProcedureArgument {
         public Types type;
         public AccessMode accessMode;
         public Scope scope;
@@ -562,7 +563,7 @@ public class AbsSyn {
 
         @Override
         public boolean isValidRight() {
-            return !init; // TODO. Current thinking; R-Assignments cannot include init
+            return !init;
         }
     }
 
@@ -1038,6 +1039,11 @@ public class AbsSyn {
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             // TODO look up in global proc table
             // TODO match types in args
+            if (!procedureMap.containsKey(name)) {
+                throw new ContextError(String.format("Couldn't find procedure '%s'", name));
+            }
+
+            // TODO fix scope
 
             List<IExpression> newArgs = new LinkedList<>();
             for (IExpression e : arguments) {
@@ -1045,7 +1051,13 @@ public class AbsSyn {
             }
             arguments = newArgs;
 
-            // TODO look up global inits
+            var desiredArguments = procedureMap.get(name).arguments;
+            for (int i = 0; i < arguments.size(); i++) {
+                var actualType = arguments.get(i).getType(localScope);
+                var desiredType = desiredArguments.get(i).type;
+                if (desiredType != actualType)
+                    throw new TypeError("CallCommand", actualType.toString(), desiredType.toString());
+            }
 
             return this;
         }
@@ -1064,6 +1076,9 @@ public class AbsSyn {
         @Override
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             expression = expression.check(localScope);
+            if (!expression.isValidLeft()) {
+                throw new ContextError("DebugIn can only accept L-Expressions");
+            }
             return this;
         }
     }
@@ -1081,6 +1096,9 @@ public class AbsSyn {
         @Override
         public ICommand check(Map<String, Types> localScope) throws TypeError, ContextError {
             expression = expression.check(localScope);
+            if (!expression.isValidRight()) {
+                throw new ContextError("DebugOut can only accept R-Expressions");
+            }
             return this;
         }
     }
