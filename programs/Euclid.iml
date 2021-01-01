@@ -7,6 +7,10 @@ program Euclid
   (in a:int1024, in b:int1024,
    out g:int1024, out numIt:int32)
 global
+  proc swap(inout ref var x:int1024, inout ref var y:int1024)
+  local const h:int1024
+  do h init := x ; x := y ; y := h endproc ;
+
   proc euclidDivNat
     (in copy const a:int1024, in copy const b:int1024,
      out copy var g:int1024, out copy var numIt:int32)
@@ -27,10 +31,6 @@ global
       numIt := numIt + 1
     endwhile
   endproc ;
-
-  proc swap(inout ref var x:int1024, inout ref var y:int1024)
-  local const h:int1024
-  do h init := x ; x := y ; y := h endproc ;
 
   const a1:int1024 ;
   const b1:int1024

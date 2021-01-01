@@ -10,6 +10,11 @@ program EuclidExtNat
    out u':int1024, out v':int1024,
    out sign:int32, out numIt:int32, out certificate:bool)
 global
+
+  proc swap(inout ref var x:int1024, inout ref var y:int1024)
+  local const h:int1024
+  do h init := x ; x := y ; y := h endproc;
+
   fun abs(x:int1024) returns y:int1024
     //ensures x >= 0 ==> y = x /\? x <= 0 ==> y = -x
   do
@@ -67,10 +72,6 @@ global
       //debugout gcd(g, g')
     endwhile
   endproc;
-
-  proc swap(inout ref var x:int1024, inout ref var y:int1024)
-  local const h:int1024
-  do h init := x ; x := y ; y := h endproc;
 
   // Function certificate returning true is a proof that g is indeed
   // the greatest common divisor of a and b.
