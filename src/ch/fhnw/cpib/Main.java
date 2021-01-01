@@ -34,7 +34,7 @@ public class Main {
 
             return validatedAbstractProgram;
         } catch (GrammarError | LexicalError | ContextError | TypeError e) {
-            System.out.printf("Error compiling '%s'%n", fileName);
+            System.err.printf("Error compiling '%s'%n", fileName);
             e.printStackTrace();
         }
         return null;
@@ -58,7 +58,10 @@ public class Main {
             }
         }
 
-        List<AbsSyn.IProgram> asts = allPrograms.stream().map(Main::compile).collect(Collectors.toList());
+        List<AbsSyn.IProgram> asts = new LinkedList<>();
+        for (String[] program : allPrograms) {
+            asts.add(compile(program));
+        }
 
         // Find the first program of that name in the list of parsed programs
         var programToCompile = asts.stream().filter(program -> ((AbsSyn.Program) program).name.equals("extendedEuclidianAlgorithm")).findFirst();
