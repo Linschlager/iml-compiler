@@ -1273,6 +1273,9 @@ public class AbsSyn {
             if (!expression.isValidLeft()) {
                 throw new ContextError("DebugIn can only accept L-Expressions");
             }
+            if (expression.getType(parentScope).getType().equals("Record")) {
+                throw new ContextError("DebugIn doesn't support record types (yet?)");
+            }
             return this;
         }
 
