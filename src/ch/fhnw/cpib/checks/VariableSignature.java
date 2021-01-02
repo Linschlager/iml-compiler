@@ -17,26 +17,14 @@ public class VariableSignature {
     private final Changemode.Attr changeMode;
     private final Mechmode.Attr mechMode;
 
-    private AccessMode accessMode;
-    private Scope scope;
+    private final AccessMode accessMode;
+    private final Scope scope;
 
-    public VariableSignature(ICodeType type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode) {
+    public VariableSignature(ICodeType type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode, AccessMode accessMode, Scope scope) {
         this.type = type;
         this.flowMode = Objects.requireNonNullElse(flowMode, Flowmode.Attr.IN);
         this.changeMode = Objects.requireNonNullElse(changeMode, Changemode.Attr.CONST);
         this.mechMode = Objects.requireNonNullElse(mechMode, Mechmode.Attr.COPY);
-
-        // TODO find accessMode and Scope
-        this.accessMode = null;
-        this.scope = null;
-    }
-
-    public VariableSignature(ICodeType type) {
-        this(type, null, null, null);
-    }
-
-    public VariableSignature(ICodeType type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode, AccessMode accessMode, Scope scope) {
-        this(type, flowMode, changeMode, mechMode);
 
         // TODO remove this constructor if it can be calculated based on the first 4 params
         this.accessMode = accessMode;

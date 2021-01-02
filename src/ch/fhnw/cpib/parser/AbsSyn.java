@@ -181,14 +181,14 @@ public class AbsSyn {
 
         @Override
         public VariableSignature getSignature() {
-            return new VariableSignature(typedIdentifier.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), null);
+            return new VariableSignature(typedIdentifier.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), null, AccessMode.DIRECT, Scope.GLOBAL);
         }
     }
 
     public interface IParameter {
         IParameter check(Map<String, VariableSignature> parentScope) throws ContextError;
         String getName();
-        VariableSignature getSignature();
+        VariableSignature getSignature(Scope scope);
     }
 
     public static class Parameter implements IParameter {
@@ -219,8 +219,9 @@ public class AbsSyn {
         }
 
         @Override
-        public VariableSignature getSignature() {
-            return new VariableSignature(typedIdentifier.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), mechMode.getMechMode());
+        public VariableSignature getSignature(Scope scope) {
+            AccessMode am = mechMode.getMechMode() == Mechmode.Attr.REF ? AccessMode.INDIRECT : AccessMode.DIRECT;
+            return new VariableSignature(typedIdentifier.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), mechMode.getMechMode(), am, scope);
         }
     }
 
@@ -258,7 +259,7 @@ public class AbsSyn {
 
         @Override
         public VariableSignature getSignature(VariableSignature outside) {
-            return new VariableSignature(outside.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), outside.getMechMode());
+            return new VariableSignature(outside.getType(), flowMode.getFlowMode(), changeMode.getChangeMode(), outside.getMechMode(), AccessMode.DIRECT, Scope.GLOBAL);
         }
     }
 
@@ -269,7 +270,7 @@ public class AbsSyn {
     public interface IStorageDeclaration extends IDeclaration {
         String getName();
         IStorageDeclaration check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
-        VariableSignature getSignature();
+        VariableSignature getSignature(Scope scope);
     }
 
     public static class StorageDeclaration implements IStorageDeclaration {
@@ -292,8 +293,8 @@ public class AbsSyn {
         }
 
         @Override
-        public VariableSignature getSignature() {
-            return new VariableSignature(typedIdentifier.getType(), null, changeMode.getChangeMode(), null);
+        public VariableSignature getSignature(Scope scope) {
+            return new VariableSignature(typedIdentifier.getType(), null, changeMode.getChangeMode(), null, AccessMode.DIRECT, scope);
         }
     }
 
@@ -338,15 +339,15 @@ public class AbsSyn {
                 if (!(p.flowMode instanceof InFlowMode))
                     throw new ContextError("FlowMode in Functions can only be In. Found " + p.flowMode);
 
-                symbolTable.put(p.getName(), p.getSignature()); // Add parameter to scope
-                args.add(p.getSignature());
+                symbolTable.put(p.getName(), p.getSignature(Scope.LOCAL)); // Add parameter to scope
+                args.add(p.getSignature(Scope.LOCAL));
 
             }
             returnValue = returnValue.check(parentScope);
-            FunctionSignature signature = new FunctionSignature(args, returnValue.getSignature().getType());
+            FunctionSignature signature = new FunctionSignature(args, returnValue.getSignature(Scope.LOCAL).getType());
             procedureMap.put(name, signature);
 
-            symbolTable.put(returnValue.getName(), returnValue.getSignature());
+            symbolTable.put(returnValue.getName(), returnValue.getSignature(Scope.LOCAL));
 
             List<IGlobalImport> newGlobImps = new LinkedList<>();
             for (IGlobalImport gi : globalImports) {
@@ -364,7 +365,7 @@ public class AbsSyn {
             for (IStorageDeclaration sd : localImports) {
                 var newSd = sd.check(parentScope);
                 newLocalImps.add(newSd);
-                symbolTable.put(newSd.getName(), newSd.getSignature());
+                symbolTable.put(newSd.getName(), newSd.getSignature(Scope.LOCAL));
             }
             localImports = newLocalImps;
 
@@ -411,7 +412,7 @@ public class AbsSyn {
             List<VariableSignature> args = new LinkedList<>();
             for (IParameter iParameter : parameters) {
                 var p = (Parameter) iParameter;
-                args.add(p.getSignature());
+                args.add(p.getSignature(Scope.LOCAL));
             }
             procedureMap.put(name, new ProcedureSignature(args));
 
@@ -420,7 +421,7 @@ public class AbsSyn {
             List<IParameter> newParams = new LinkedList<>();
             for (IParameter iParameter : parameters) {
                 var p = iParameter.check(symbolTable);
-                symbolTable.put(p.getName(), p.getSignature());
+                symbolTable.put(p.getName(), p.getSignature(Scope.LOCAL));
                 newParams.add(p);
             }
             parameters = newParams;
@@ -439,7 +440,7 @@ public class AbsSyn {
             List<IStorageDeclaration> newLocalImps = new LinkedList<>();
             for (IStorageDeclaration localImport : localImports) {
                 var li = localImport.check(symbolTable);
-                symbolTable.put(li.getName(), li.getSignature());
+                symbolTable.put(li.getName(), li.getSignature(Scope.LOCAL));
                 newLocalImps.add(li);
             }
             localImports = newLocalImps;
@@ -1508,14 +1509,13 @@ public class AbsSyn {
 
             return location;
         }
-
-
     }
 
     public interface IProgram extends IAbsSynNode  {
         IProgram check() throws TypeError, ContextError;
         Map<String, VariableSignature> getSymbolTable();
     }
+
     public static class Program implements IProgram {
         public String name;
         public List<IProgramParameter> programParameters;
@@ -1550,7 +1550,7 @@ public class AbsSyn {
                 newGlobDecls.add(gd.check(symbolTable));
                 if (gd instanceof StorageDeclaration) {
                     var s = (IStorageDeclaration) gd;
-                    symbolTable.put(s.getName(), s.getSignature());
+                    symbolTable.put(s.getName(), s.getSignature(Scope.GLOBAL));
                 }
             }
             globalDeclarations = newGlobDecls;
@@ -1576,7 +1576,7 @@ public class AbsSyn {
             int globalStoreAddress = 0;
             for (IDeclaration declaration : globalDeclarations) {
                 if (declaration instanceof StorageDeclaration) {
-                    VariableSignature signature = ((StorageDeclaration) declaration).getSignature();
+                    VariableSignature signature = ((StorageDeclaration) declaration).getSignature(Scope.GLOBAL);
                     int storeSize = signature.getType().getSize();
 
                     signature.setAddr(globalStoreAddress);
