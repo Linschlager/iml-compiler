@@ -2,9 +2,10 @@
 program factorialRec()
 global
   const n:int64;
-  fun factorial (n: int64) returns product:int64
+
+  fun factorial (n: int64) returns const product:int64
   do
-    product := product * factorial(n - 1)
+    product init := product * factorial(n - 1)
   endfun
 do
   debugin n init;

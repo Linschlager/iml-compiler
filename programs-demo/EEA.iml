@@ -5,8 +5,8 @@ global
     // Extended euclidian algorithm in a function
     fun eea(num1: int1024, num2: int1024) returns const result:eeaResult
     local
-        a: int1024; b: int1024; x0: int1024; y0: int1024; x1: int1024; y1: int1024; q: int1024; rest: int1024;
-        tmpX: int1024; tmpY: int1024
+        var a: int1024; var b: int1024; var x0: int1024; var y0: int1024; var x1: int1024; var y1: int1024; var q: int1024; var rest: int1024;
+        var tmpX: int1024; var tmpY: int1024
     do
         // Check that num1 and num2 aren't 0
         if num1 = 0 \/? num2 = 0 then
@@ -63,6 +63,6 @@ global
 do
     debugin num1 init;
     debugin num2 init;
-    result := eea(num1, num2);
+    result init := eea(num1, num2);
     debugout result
 endprogram

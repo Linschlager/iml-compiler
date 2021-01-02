@@ -15,7 +15,7 @@ global
 
     // Helper function to approximate the sqrt using newton's method. Will not be very good due to rounding: https://en.wikipedia.org/wiki/Newton%27s_method
     fun sqrt (num: int64) returns const s:int64
-    local x0: int64; x1: int64; i: int32 do
+    local var x0: int64; var x1: int64; var i: int32 do
         i init := 0;
         x0 init := 1;
         x1 init := x0;
