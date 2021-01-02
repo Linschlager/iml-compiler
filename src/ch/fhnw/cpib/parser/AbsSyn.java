@@ -1169,6 +1169,21 @@ public class AbsSyn {
             if (l.getType(parentScope) != r.getType(parentScope))
                 throw new TypeError("AssignmentCommand", l.getType(parentScope).toString(), r.getType(parentScope).toString());
 
+            if (l instanceof StoreExpression) {
+                var se = (StoreExpression)l;
+                var sign = parentScope.get(se.name);
+                if (!se.init && sign.getChangeMode() == Changemode.Attr.CONST) {
+                    throw new ContextError("Cannot re-assign constant values");
+                }
+            }
+            if (l instanceof RecordAccessExpression) {
+                var rae = (RecordAccessExpression)l;
+                var sign = parentScope.get(rae.variableName);
+                if (sign.getChangeMode() == Changemode.Attr.CONST) {
+                    throw new ContextError("Cannot re-assign fields on constant records");
+                }
+            }
+
             return this;
         }
 

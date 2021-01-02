@@ -1,6 +1,6 @@
 program Add17Proc3()
 global
-  proc p(inout copy x:int32)
+  proc p(inout copy var x:int32)
   do
     x := x + 17
   endproc;
