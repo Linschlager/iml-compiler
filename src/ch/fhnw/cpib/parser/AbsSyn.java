@@ -480,9 +480,7 @@ public class AbsSyn {
             }
             RecordSignature recordSignature = new RecordSignature(f);
             recordMap.put(name, recordSignature);
-
-            var paramTypes = f.stream().map(single -> single.type).collect(Collectors.toList());
-            Types.allTypes.put(name, new RecordCodeType(name, paramTypes));
+            Types.allTypes.put(name, new RecordCodeType(name, f));
 
             return this;
         }
@@ -1166,7 +1164,8 @@ public class AbsSyn {
         @Override
         public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
             Environment.IdentifierInfo info = env.getIdentifierInfo(variableName);
-            int fieldOffset = env.getSymbolTable().get(variableName).getType().getSize();
+            var recordType = (RecordCodeType)(env.getSymbolTable().get(variableName).getType());
+            int fieldOffset = recordType.calculateFieldOffset(fieldNames);
 
             // same as store expression
             if (!info.isLocalScope && info.isDirectAccess) {
