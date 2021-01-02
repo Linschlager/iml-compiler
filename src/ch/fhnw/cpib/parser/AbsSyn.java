@@ -1126,37 +1126,41 @@ public class AbsSyn {
             return this;
         }
 
-        // TODO clean this mess up
+        private ICodeType getRecordType(String recordName, String field, List<String> moreFields) throws ContextError {
+            var recordSignature = recordMap.get(recordName);
+            if (recordSignature == null)
+                throw new ContextError(String.format("Couldn't find record %s", recordName));
+
+            var correctField = recordSignature.fields.stream().filter(f -> f.name.equals(field)).findFirst();
+            if (correctField.isEmpty())
+                throw new ContextError(String.format("Couldn't find field '%s' on '%s'", field, recordName));
+
+            var fieldType = correctField.get().type;
+            if (!(fieldType instanceof RecordCodeType)) {
+                if (moreFields.size() > 0)
+                    throw new ContextError(String.format("Invalid fields: %s", moreFields.toString()));
+
+                return fieldType;
+            } else {
+                if (moreFields.size() == 0) {
+                    return fieldType;
+                }
+            }
+
+            return getRecordType(fieldType.getName(), moreFields.get(0), moreFields.subList(1, moreFields.size()));
+        }
+
         @Override
         public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
-            var signature = parentScope.get(variableName);
-            if (signature == null) {
-                throw new ContextError("Couldn't find record " + variableName + " in " + parentScope.toString());
-            }
-            var type = signature.getType();
+            var record = parentScope.get(variableName);
+            if (record == null)
+                throw new ContextError(String.format("Couldn't find %s in %s", variableName, parentScope.toString()));
 
-            if (!(type instanceof RecordCodeType)) {
-                throw new TypeError("RecordAccessExpression", type.getName(), "Record");
-            }
+            if (!(record.getType() instanceof RecordCodeType))
+                throw new ContextError(String.format("%s isn't a record", variableName));
 
-            var record = recordMap.get(type.getName());
-            if (record == null) {
-                throw new ContextError("Couldn't find record " + type.getName() + " in " + recordMap.toString());
-            }
-            ICodeType finalType = null;
-            for (String field : fieldNames) {
-                var fieldOpt = record.fields.stream().filter(f -> f.name.equals(field)).findFirst();
-                if (fieldOpt.isEmpty()) {
-                    throw new ContextError(String.format("Couldn't find field %s on %s", field, type.getName()));
-                }
-                var nextField = fieldOpt.get();
-                if (nextField.type instanceof RecordCodeType) {
-                    record = recordMap.get(nextField.type.getName());
-                }
-                finalType = nextField.type;
-            }
-            if (finalType == null) throw new ContextError("Couldn't resolve fields in record");
-            return finalType;
+            var recordName = record.getType().getName();
+            return getRecordType(recordName, fieldNames.get(0), fieldNames.subList(1, fieldNames.size()));
         }
 
         @Override
