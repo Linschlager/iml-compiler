@@ -1,6 +1,10 @@
 package ch.fhnw.cpib.parser;
 
 import ch.fhnw.cpib.checks.*;
+import ch.fhnw.cpib.checks.types.BoolCodeType;
+import ch.fhnw.cpib.checks.types.ICodeType;
+import ch.fhnw.cpib.checks.types.IntCodeType;
+import ch.fhnw.cpib.checks.types.RecordCodeType;
 import ch.fhnw.cpib.codeGen.Environment;
 import ch.fhnw.cpib.exceptions.ContextError;
 import ch.fhnw.cpib.exceptions.TypeError;
@@ -10,6 +14,7 @@ import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray.CodeTooSmallError;
 import ch.fhnw.lederer.virtualmachineFS2015.IInstructions;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AbsSyn {
 
@@ -28,7 +33,7 @@ public class AbsSyn {
     private static Map<String, RecordSignature> recordMap;
 
     public interface IType {
-        Types convertType();
+        ICodeType convertType();
     }
     public static class TraditionalType implements IType {
         public Type type;
@@ -38,7 +43,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types convertType() {
+        public ICodeType convertType() {
             return Types.allTypes.get(type.attr.toString());
         }
     }
@@ -51,8 +56,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types convertType() {
-            return Types.allTypes.get(name); // TODO
+        public ICodeType convertType() {
+            return Types.allTypes.get(name);
         }
     }
 
@@ -122,7 +127,7 @@ public class AbsSyn {
 
     public interface ITypedIdentifier {
         String getName();
-        Types getType();
+        ICodeType getType();
     }
     public static class TypedIdentifier implements ITypedIdentifier {
         public String name;
@@ -139,7 +144,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType() {
+        public ICodeType getType() {
             return type.convertType();
         }
     }
@@ -476,8 +481,8 @@ public class AbsSyn {
             RecordSignature recordSignature = new RecordSignature(f);
             recordMap.put(name, recordSignature);
 
-            var recordType = new Types("Record", name);
-            Types.allTypes.put(name, recordType);
+            var paramTypes = f.stream().map(single -> single.type).collect(Collectors.toList());
+            Types.allTypes.put(name, new RecordCodeType(name, paramTypes));
 
             return this;
         }
@@ -498,7 +503,7 @@ public class AbsSyn {
     public interface IExpression {
         IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
 
-        Types getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        ICodeType getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
 
         boolean isValidLeft();
 
@@ -522,8 +527,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.BOOLEAN;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) {
+            return new BoolCodeType();
         }
 
         @Override
@@ -564,8 +569,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.INTEGER;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) {
+            return new IntCodeType(64); // TODO allow for all ints
         }
 
         @Override
@@ -630,7 +635,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) throws ContextError {
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError {
             if (isNotInScope(parentScope)) {
                 throw new ContextError(String.format("Couldn't find %s in %s", name, parentScope.toString()));
             }
@@ -713,7 +718,7 @@ public class AbsSyn {
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(parentScope);
                 var desiredType = desiredArguments.get(i).getType();
-                if (desiredType != actualType)
+                if (!desiredType.equals(actualType))
                     throw new TypeError("FunctionCallExpression", actualType.toString(), desiredType.toString());
             }
 
@@ -721,7 +726,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
             var signature = procedureMap.get(name);
             if (signature == null) {
                 throw new ContextError(String.format("Couldn't find function '%s'", name));
@@ -760,7 +765,7 @@ public class AbsSyn {
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(parentScope);
                 var desiredType = desiredArguments.get(i).type;
-                if (desiredType != actualType)
+                if (!desiredType.equals(actualType))
                     throw new TypeError("RecordCallExpression", actualType.toString(), desiredType.toString());
             }
 
@@ -768,7 +773,7 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
+        public ICodeType getType(Map<String, VariableSignature> parentScope) {
             return Types.allTypes.get(name);
         }
 
@@ -827,19 +832,22 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
-            if (operator instanceof NotMonadicOperator && expression.getType(parentScope) != Types.BOOLEAN) {
-                throw new TypeError("PosMonadicOperator", expression.getType(parentScope).toString(), Types.BOOLEAN.toString());
+            if (operator instanceof NotMonadicOperator && !(expression.getType(parentScope) instanceof BoolCodeType)) {
+                throw new TypeError("NotMonadicOperator", expression.getType(parentScope).toString(), BoolCodeType.typeString);
 
             }
-            if (operator instanceof PosMonadicOperator && expression.getType(parentScope) != Types.INTEGER) {
-                throw new TypeError("PosMonadicOperator", expression.getType(parentScope).toString(), Types.INTEGER.toString());
+            if (operator instanceof PosMonadicOperator && !(expression.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("PosMonadicOperator", expression.getType(parentScope).toString(), IntCodeType.typeString);
+            }
+            if (operator instanceof NegMonadicOperator && !(expression.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("NegMonadicOperator", expression.getType(parentScope).toString(), IntCodeType.typeString);
             }
             expression = expression.check(parentScope);
             return this;
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
             return expression.getType(parentScope);
         }
         @Override
@@ -894,11 +902,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
-            if (l.getType(parentScope) != Types.INTEGER) {
-                throw new TypeError("MultiplicationDyadicExpression", l.getType(parentScope).toString(), Types.INTEGER.toString());
+            if (!(l.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("MultiplicationDyadicExpression", l.getType(parentScope).toString(), IntCodeType.typeString);
             }
-            if (r.getType(parentScope) != Types.INTEGER) {
-                throw new TypeError("MultiplicationDyadicExpression", r.getType(parentScope).toString(), Types.INTEGER.toString());
+            if (!(r.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("MultiplicationDyadicExpression", r.getType(parentScope).toString(), IntCodeType.typeString);
             }
             l = l.check(parentScope);
             r = r.check(parentScope);
@@ -906,8 +914,9 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.INTEGER;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
+            // TODO Larger bit-size?
+            return l.getType(parentScope);
         }
 
         @Override
@@ -946,11 +955,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
-            if (l.getType(parentScope) != Types.INTEGER) {
-                throw new TypeError("AdditionDyadicExpression", l.getType(parentScope).toString(), Types.INTEGER.toString());
+            if (!(l.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("AdditionDyadicExpression", l.getType(parentScope).toString(), IntCodeType.typeString);
             }
-            if (r.getType(parentScope) != Types.INTEGER) {
-                throw new TypeError("AdditionDyadicExpression", r.getType(parentScope).toString(), Types.INTEGER.toString());
+            if (!(r.getType(parentScope) instanceof IntCodeType)) {
+                throw new TypeError("AdditionDyadicExpression", r.getType(parentScope).toString(), IntCodeType.typeString);
             }
             l = l.check(parentScope);
             r = r.check(parentScope);
@@ -958,8 +967,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.INTEGER;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
+            return l.getType(parentScope);
         }
 
         @Override
@@ -999,18 +1008,18 @@ public class AbsSyn {
             switch (operator) {
                 case EQ:
                 case NE:
-                    if (l.getType(parentScope) == Types.BOOLEAN && r.getType(parentScope) != Types.BOOLEAN) {
-                        throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), Types.BOOLEAN.toString());
+                    if (l.getType(parentScope) instanceof BoolCodeType && !(r.getType(parentScope) instanceof BoolCodeType)) {
+                        throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), BoolCodeType.typeString);
                     }
                 case GE:
                 case GT:
                 case LE:
                 case LT:
-                    if (l.getType(parentScope) != Types.INTEGER) {
-                        throw new TypeError("RelativeDyadicExpression", l.getType(parentScope).toString(), Types.INTEGER.toString());
+                    if (!(l.getType(parentScope) instanceof IntCodeType)) {
+                        throw new TypeError("RelativeDyadicExpression", l.getType(parentScope).toString(), IntCodeType.typeString);
                     }
-                    if (r.getType(parentScope) != Types.INTEGER) {
-                        throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), Types.INTEGER.toString());
+                    if (!(r.getType(parentScope) instanceof IntCodeType)) {
+                        throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), IntCodeType.typeString);
                     }
                     l = l.check(parentScope);
                     r = r.check(parentScope);
@@ -1019,8 +1028,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.BOOLEAN;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) {
+            return new BoolCodeType();
         }
 
         @Override
@@ -1061,11 +1070,11 @@ public class AbsSyn {
 
         @Override
         public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
-            if (l.getType(parentScope) != Types.BOOLEAN) {
-                throw new TypeError("RelativeDyadicExpression", l.getType(parentScope).toString(), Types.BOOLEAN.toString());
+            if (!(l.getType(parentScope) instanceof BoolCodeType)) {
+                throw new TypeError("RelativeDyadicExpression", l.getType(parentScope).toString(), BoolCodeType.typeString);
             }
-            if (r.getType(parentScope) != Types.BOOLEAN) {
-                throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), Types.BOOLEAN.toString());
+            if (!(r.getType(parentScope) instanceof BoolCodeType)) {
+                throw new TypeError("RelativeDyadicExpression", r.getType(parentScope).toString(), BoolCodeType.typeString);
             }
             l = l.check(parentScope);
             r = r.check(parentScope);
@@ -1073,8 +1082,8 @@ public class AbsSyn {
         }
 
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) {
-            return Types.BOOLEAN;
+        public ICodeType getType(Map<String, VariableSignature> parentScope) {
+            return new BoolCodeType();
         }
 
         @Override
@@ -1119,30 +1128,30 @@ public class AbsSyn {
 
         // TODO clean this mess up
         @Override
-        public Types getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
+        public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
             var signature = parentScope.get(variableName);
             if (signature == null) {
                 throw new ContextError("Couldn't find record " + variableName + " in " + parentScope.toString());
             }
             var type = signature.getType();
 
-            if (!type.getType().equals("Record")) {
-                throw new TypeError("RecordAccessExpression", type.getType(), "Record");
+            if (!(type instanceof RecordCodeType)) {
+                throw new TypeError("RecordAccessExpression", type.getName(), "Record");
             }
-            var recordName = type.getRecordName();
-            var record = recordMap.get(recordName);
+
+            var record = recordMap.get(type.getName());
             if (record == null) {
-                throw new ContextError("Couldn't find record " + recordName + " in " + recordMap.toString());
+                throw new ContextError("Couldn't find record " + type.getName() + " in " + recordMap.toString());
             }
-            Types finalType = null;
+            ICodeType finalType = null;
             for (String field : fieldNames) {
                 var fieldOpt = record.fields.stream().filter(f -> f.name.equals(field)).findFirst();
                 if (fieldOpt.isEmpty()) {
-                    throw new ContextError(String.format("Couldn't find field %s on %s", field, recordName));
+                    throw new ContextError(String.format("Couldn't find field %s on %s", field, type.getName()));
                 }
                 var nextField = fieldOpt.get();
-                if (nextField.type.getRecordName() != null) {
-                    record = recordMap.get(nextField.type.getRecordName());
+                if (nextField.type instanceof RecordCodeType) {
+                    record = recordMap.get(nextField.type.getName());
                 }
                 finalType = nextField.type;
             }
@@ -1153,7 +1162,7 @@ public class AbsSyn {
         @Override
         public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
             Environment.IdentifierInfo info = env.getIdentifierInfo(variableName);
-            int fieldOffset = recordMap.get(env.getSymbolTable().get(variableName).getType().getRecordName()).calculateFieldOffset(fieldNames, recordMap);
+            int fieldOffset = env.getSymbolTable().get(variableName).getType().getSize();
 
             // same as store expression
             if (!info.isLocalScope && info.isDirectAccess) {
@@ -1217,7 +1226,7 @@ public class AbsSyn {
             if (!r.isValidRight())
                 throw new ContextError(String.format("%s cannot be on the right side of an assignment", r.toString()));
 
-            if (l.getType(parentScope) != r.getType(parentScope))
+            if (!l.getType(parentScope).equals(r.getType(parentScope)))
                 throw new TypeError("AssignmentCommand", l.getType(parentScope).toString(), r.getType(parentScope).toString());
 
             if (l instanceof StoreExpression) {
@@ -1243,9 +1252,8 @@ public class AbsSyn {
             if (r instanceof RecordCallExpression) {
                 List<RecordCallExpression.ArgCodeGen> codeGens = ((RecordCallExpression) r).codes();
                 // load all addresses for all fields on stack (each increment of previous)
-                RecordSignature record = recordMap.get(r.getType(env.getSymbolTable()).getRecordName());
-                int recordSize = record.getRecordSize(recordMap);
-                assert recordSize == codeGens.size();
+                int recordSize = r.getType(env.getSymbolTable()).getSize();
+                assert recordSize == codeGens.size(); // Doesn't do anything
 
                 location = l.codeLValue(codeArray, location, env);
                 for (int i = 1; i < recordSize; i++) {
@@ -1289,8 +1297,8 @@ public class AbsSyn {
         public ICommand check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
             condition = condition.check(parentScope);
 
-            if (condition.getType(parentScope) != Types.BOOLEAN)
-                throw new TypeError("IfCommand condition", condition.getType(parentScope).toString(), Types.BOOLEAN.toString());
+            if (!(condition.getType(parentScope) instanceof BoolCodeType))
+                throw new TypeError("IfCommand condition", condition.getType(parentScope).toString(), BoolCodeType.typeString);
 
             List<ICommand> newCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -1342,8 +1350,8 @@ public class AbsSyn {
         public ICommand check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
             condition = condition.check(parentScope);
 
-            if (condition.getType(parentScope) != Types.BOOLEAN)
-                throw new TypeError("WhileCommand", condition.getType(parentScope).toString(), Types.BOOLEAN.toString());
+            if (!(condition.getType(parentScope) instanceof BoolCodeType))
+                throw new TypeError("WhileCommand", condition.getType(parentScope).toString(), BoolCodeType.typeString);
 
             List<ICommand> newElseCmds = new LinkedList<>();
             for (ICommand command : commands) {
@@ -1429,7 +1437,7 @@ public class AbsSyn {
             if (!expression.isValidLeft()) {
                 throw new ContextError("DebugIn can only accept L-Expressions");
             }
-            if (expression.getType(parentScope).getType().equals("Record")) {
+            if (expression.getType(parentScope) instanceof RecordCodeType) {
                 throw new ContextError("DebugIn doesn't support record types (yet?)");
             }
             return this;
@@ -1438,11 +1446,12 @@ public class AbsSyn {
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeLValue(codeArray, location, env);
-            Types type = expression.getType(env.getSymbolTable());
-            switch (type.getType()) {
-                case "INTEGER" -> codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
-                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.InputBool(expression.toString()));
-                default -> throw new RuntimeException("Can only debugin integer or booleans");
+            ICodeType type = expression.getType(env.getSymbolTable());
+
+            if (type instanceof IntCodeType) {
+                codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
+            } else if (type instanceof BoolCodeType) {
+                codeArray.put(location++, new IInstructions.InputBool(expression.toString()));
             }
 
             // todo maybe add better label for input
@@ -1472,22 +1481,24 @@ public class AbsSyn {
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeRValue(codeArray, location, env);
-            Types type = expression.getType(env.getSymbolTable());
-            switch (type.getType()) {
-                case "INTEGER" -> codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
-                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
-                case "Record" -> {
-                    /*RecordSignature recordSignature = recordMap.get(type.getRecordName());
-                    System.out.println(recordSignature);
-                    for (RecordSignature.RecordField field : recordSignature.fields) {
-                        if (field.type.getRecordName() == null) {
+            ICodeType type = expression.getType(env.getSymbolTable());
 
-                        }
-                    }*/
-                    // todo record
-                    throw new RuntimeException("type not yet implemented for debugout: Record");
-                }
-                default -> throw new RuntimeException("type not yet implemented for debugout: " + type.getType());
+            if (type instanceof IntCodeType) {
+                codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+            } else if (type instanceof BoolCodeType) {
+                codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
+            } else if (type instanceof RecordCodeType) {
+                // TODO records
+                /*RecordSignature recordSignature = recordMap.get(type.getRecordName());
+                System.out.println(recordSignature);
+                for (RecordSignature.RecordField field : recordSignature.fields) {
+                    if (field.type.getRecordName() == null) {
+
+                    }
+                }*/
+                throw new RuntimeException("type not yet implemented for debugout: Record");
+            } else {
+                throw new RuntimeException("type not yet implemented for debugout: " + type.getName());
             }
 
             // todo maybe add better label for input
@@ -1563,12 +1574,7 @@ public class AbsSyn {
             for (IDeclaration declaration : globalDeclarations) {
                 if (declaration instanceof StorageDeclaration) {
                     VariableSignature signature = ((StorageDeclaration) declaration).getSignature();
-                    int storeSize = 1;
-                    if (signature.getType().getRecordName() != null) {
-                        RecordSignature record = recordMap.get(signature.getType().getRecordName());
-
-                        storeSize = record.getRecordSize(recordMap);
-                    }
+                    int storeSize = signature.getType().getSize();
 
                     signature.setAddr(globalStoreAddress);
                     codeArray.put(location++, new IInstructions.AllocBlock(storeSize));
