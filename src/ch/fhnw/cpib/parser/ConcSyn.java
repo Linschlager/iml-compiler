@@ -494,9 +494,18 @@ public class ConcSyn {
         }
     }
     static class PosMonadicOpr implements IMonadicOpr {
+        private final AddOpr addOpr;
+
+        public PosMonadicOpr(AddOpr addOpr) {
+            this.addOpr = addOpr;
+        }
+
         @Override
         public AbsSyn.IMonadicOperator toAbsSyn() {
-            return new AbsSyn.PosMonadicOperator();
+            return switch (addOpr.attr) {
+                case PLUS -> new AbsSyn.PosMonadicOperator();
+                case MINUS -> new AbsSyn.NegMonadicOperator();
+            };
         }
     }
 

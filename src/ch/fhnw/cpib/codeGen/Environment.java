@@ -1,5 +1,9 @@
 package ch.fhnw.cpib.codeGen;
 
+import ch.fhnw.cpib.checks.VariableSignature;
+
+import java.util.Map;
+
 // todo: should be created by scope checker (see lecture from 8.12.2020, ~47:00)
 public class Environment {
 
@@ -13,6 +17,16 @@ public class Environment {
             this.isLocalScope = isLocalScope;
             this.isDirectAccess = isDirectAccess;
         }
+    }
+
+    public final Map<String, VariableSignature> symbolTable;
+
+    public Environment(Map<String, VariableSignature> symbolTable) {
+        this.symbolTable = symbolTable;
+    }
+
+    public Map<String, VariableSignature> getSymbolTable() {
+        return symbolTable;
     }
 
     public IdentifierInfo getIdentifierInfo(String ident) {

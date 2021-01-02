@@ -12,20 +12,46 @@ import ch.fhnw.cpib.parser.ConcSyn;
 import ch.fhnw.cpib.parser.Parser;
 import ch.fhnw.lederer.virtualmachineFS2015.CodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
-import ch.fhnw.lederer.virtualmachineFS2015.IVirtualMachine;
 import ch.fhnw.lederer.virtualmachineFS2015.VirtualMachine;
 
+import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Main {
-    private static AbsSyn.IProgram compile(String[] input) {
-        var fileName = input[0];
-        var programCode = input[1];
+
+    public static void main(String[] args) throws Exception {
+        Test.test(); // Do extensive testing!
+        //Map<String, AbsSyn.IProgram> programMap = compileAllPrograms(); doesnt work, because it uses static variables
+
+        // Find the first program of that name in the list of parsed programs
+        //var file = Path.of("programs/Add17.iml");
+        //var file = Path.of("programs/IfCmd.iml");
+        //var file = Path.of("programs/WhileCmd.iml");
+        var file = Path.of("programs-demo/BasicRecords.iml");
+
+        var programToCompile = compile(file.getFileName().toString(), Files.readString(file));
+
+        ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
+        programToCompile.code(codeArray, 0, new Environment(programToCompile.getSymbolTable()) {
+            @Override
+            public IdentifierInfo getIdentifierInfo(String ident) {
+                return switch (ident) {
+                    case "x", "vec" -> new IdentifierInfo(0, false, true);
+                    case "y" -> new IdentifierInfo(1, false, true);
+                    default -> throw new IllegalStateException("Unexpected value: " + ident);
+                };
+            }
+        });
+        codeArray.resize();
+
+        new VirtualMachine(codeArray, 100_000);
+    }
+
+    private static AbsSyn.IProgram compile(String fileName, String programCode) {
         try {
             ITokenList tokens = new Scanner(programCode).scan();
             ConcSyn.IProgram program = new Parser(tokens).parse();
@@ -40,46 +66,24 @@ public class Main {
         return null;
     }
 
-    public static void main(String[] args) throws Exception {
-        Test.test(); // Do extensive testing!
-        List<String[]> allPrograms = new LinkedList<>();
+    private static Map<String, AbsSyn.IProgram> compileAllPrograms() throws IOException {
+        Map<String, AbsSyn.IProgram> allPrograms = new HashMap<>();
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("programs"))) {
-            for (Path file: stream) {
+            for (Path file : stream) {
                 var output = Files.readString(file);
-                allPrograms.add(new String[] {file.getFileName().toString(), output});
+                String fileName = file.getFileName().toString();
+                allPrograms.put(fileName, compile(fileName, output));
             }
         }
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("programs-demo"))) {
-            for (Path file: stream) {
+            for (Path file : stream) {
                 var output = Files.readString(file);
-                allPrograms.add(new String[] {file.getFileName().toString(), output});
+                String fileName = file.getFileName().toString();
+                allPrograms.put(fileName, compile(fileName, output));
             }
         }
-
-        List<AbsSyn.IProgram> asts = allPrograms.stream().map(Main::compile).collect(Collectors.toList());
-
-        // Find the first program of that name in the list of parsed programs
-        var programToCompile = asts.stream().filter(program -> ((AbsSyn.Program) program).name.equals("extendedEuclidianAlgorithm")).findFirst();
-
-        if (programToCompile.isEmpty()) throw new Exception("Couldn't find program");
-        else {
-            var ast = programToCompile.get();
-            ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
-            ast.code(codeArray, 0, new Environment() {
-                @Override
-                public IdentifierInfo getIdentifierInfo(String ident) {
-                    return switch (ident) {
-                        case "x" -> new IdentifierInfo(0, false, true);
-                        case "y" -> new IdentifierInfo(1, false, true);
-                        default -> throw new IllegalStateException("Unexpected value: " + ident);
-                    };
-                }
-            });
-            codeArray.resize();
-        }
-
-        //new VirtualMachine(codeArray, 100_000);
+        return allPrograms;
     }
 }

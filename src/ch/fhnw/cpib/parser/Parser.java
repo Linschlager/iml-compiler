@@ -1311,8 +1311,9 @@ public class Parser implements IParser {
             consume(Terminal.NOTOPR);
             return new ConcSyn.NotMonadicOpr();
         } else if (token.terminal == Terminal.ADDOPR) {
+            AddOpr addOpr = (AddOpr) this.token;
             consume(Terminal.ADDOPR);
-            return new ConcSyn.PosMonadicOpr();
+            return new ConcSyn.PosMonadicOpr(addOpr);
         } else throw new GrammarError("monadicOpr");
     }
 

@@ -21,10 +21,7 @@ public class AbsSyn {
          * @throws CodeTooSmallError
          *           Thrown when the code segment of the VM is full.
          */
-        default int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            // todo remove this default impl and check all missing implementations (maybe they dont need to implement this interface?)
-            throw new RuntimeException("Not yet implemented");
-        }
+        int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError;
     }
 
     private static Map<String, ProcedureSignature> procedureMap;
@@ -306,6 +303,8 @@ public class AbsSyn {
         public List<IStorageDeclaration> localImports;
         public List<ICommand> commands;
 
+        public Map<String, VariableSignature> symbolTable = null;
+
         public FunctionDeclaration(String name, List<IParameter> parameterList, IStorageDeclaration returnValue, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
             this.name = name;
             this.parameterList = parameterList;
@@ -324,7 +323,7 @@ public class AbsSyn {
                 throw new ContextError("Function " + name + " cannot be declared, there is a record of that name.");
             }
 
-            Map<String, VariableSignature> symbolTable = new HashMap<>();
+            symbolTable = new HashMap<>();
 
             // Register function before checking commands to allow for recursion
             List<VariableSignature> args = new LinkedList<>();
@@ -384,6 +383,8 @@ public class AbsSyn {
         public List<IStorageDeclaration> localImports;
         public List<ICommand> commands;
 
+        public Map<String, VariableSignature> symbolTable = null;
+
         public ProcedureDeclaration(String name, List<IParameter> parameters, List<IGlobalImport> globalImports, List<IStorageDeclaration> localImports, List<ICommand> commands) {
             this.name = name;
             this.parameters = parameters;
@@ -409,7 +410,7 @@ public class AbsSyn {
             }
             procedureMap.put(name, new ProcedureSignature(args));
 
-            Map<String, VariableSignature> symbolTable = new HashMap<>();
+            symbolTable = new HashMap<>();
 
             List<IParameter> newParams = new LinkedList<>();
             for (IParameter iParameter : parameters) {
@@ -489,6 +490,9 @@ public class AbsSyn {
     }
 
     public static class PosMonadicOperator implements IMonadicOperator {
+    }
+
+    public static class NegMonadicOperator implements IMonadicOperator {
     }
 
     public interface IExpression {
@@ -776,7 +780,28 @@ public class AbsSyn {
 
         @Override
         public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            throw new RuntimeException("Not yet implemented");
+            throw new RuntimeException("RecordCallExpression cant be used as r-value without using method codes()");
+        }
+
+        @FunctionalInterface
+        public interface ArgCodeGen {
+            int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
+        }
+
+        public List<ArgCodeGen> codes() {
+            List<ArgCodeGen> argCodes = new ArrayList<>();
+
+            // evaluate arguments in reverse order (no problem as expressions are pure) to match order of addresses on stack
+            for (int i = arguments.size() - 1; i >= 0; i--) {
+                IExpression expression = arguments.get(i);
+                if (expression instanceof RecordCallExpression) {
+                    argCodes.addAll(((RecordCallExpression) expression).codes());
+                } else {
+                    argCodes.add(expression::codeRValue);
+                }
+            }
+
+            return argCodes;
         }
     }
 
@@ -809,7 +834,8 @@ public class AbsSyn {
             if (operator instanceof PosMonadicOperator && expression.getType(parentScope) != Types.INTEGER) {
                 throw new TypeError("PosMonadicOperator", expression.getType(parentScope).toString(), Types.INTEGER.toString());
             }
-            return expression.check(parentScope);
+            expression = expression.check(parentScope);
+            return this;
         }
 
         @Override
@@ -829,7 +855,10 @@ public class AbsSyn {
                 codeArray.put(location++, new IInstructions.SubInt()); // 1 - boolean = !boolean
             } else if (operator instanceof PosMonadicOperator) {
                 location = expression.codeRValue(codeArray, location, env);
-                // todo do we need to do anything?
+            } else if (operator instanceof NegMonadicOperator) {
+                location = expression.codeRValue(codeArray, location, env);
+                codeArray.put(location++, new IInstructions.LoadImInt(-1));
+                codeArray.put(location++, new IInstructions.MultInt());
             } else {
                 throw new RuntimeException("Invalid operator");
             }
@@ -1123,7 +1152,25 @@ public class AbsSyn {
 
         @Override
         public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            throw new RuntimeException("Not yet implemented");
+            Environment.IdentifierInfo info = env.getIdentifierInfo(variableName);
+            int fieldOffset = recordMap.get(env.getSymbolTable().get(variableName).getType().getRecordName()).calculateFieldOffset(fieldNames, recordMap);
+
+            // same as store expression
+            if (!info.isLocalScope && info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadImInt(info.addr+fieldOffset));
+            } else if (info.isLocalScope && info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr + fieldOffset));
+            } else if (info.isLocalScope && !info.isDirectAccess) {
+                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
+                codeArray.put(location++, new IInstructions.Deref());
+                codeArray.put(location++, new IInstructions.LoadImInt(fieldOffset));
+                codeArray.put(location++, new IInstructions.AddInt());
+
+            } else {
+                throw new RuntimeException("invalid identifier info found for record: " + variableName);
+            }
+
+            return location;
         }
 
         @Override
@@ -1143,6 +1190,11 @@ public class AbsSyn {
         @Override
         public ICommand check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
             return this;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) {
+            return location;
         }
     }
     public interface IAssignmentCommand extends ICommand {}
@@ -1187,10 +1239,33 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            location = l.codeLValue(codeArray, location, env);
-            location = r.codeRValue(codeArray, location, env);
-            codeArray.put(location++, new IInstructions.Store());
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
+            if (r instanceof RecordCallExpression) {
+                List<RecordCallExpression.ArgCodeGen> codeGens = ((RecordCallExpression) r).codes();
+                // load all addresses for all fields on stack (each increment of previous)
+                RecordSignature record = recordMap.get(r.getType(env.getSymbolTable()).getRecordName());
+                int recordSize = record.getRecordSize(recordMap);
+                assert recordSize == codeGens.size();
+
+                location = l.codeLValue(codeArray, location, env);
+                for (int i = 1; i < recordSize; i++) {
+                    codeArray.put(location++, new IInstructions.Dup());
+                    codeArray.put(location++, new IInstructions.LoadImInt(1));
+                    codeArray.put(location++, new IInstructions.AddInt());
+                }
+                // dont use this location = r.codeRValue(codeArray, location, env);
+                // use special purpose method instead:
+                for (RecordCallExpression.ArgCodeGen codeGen : codeGens) {
+                    // store all evaluated arguments in order of fields
+                    location = codeGen.codeRValue(codeArray, location, env);
+                    codeArray.put(location++, new IInstructions.Store());
+                }
+            } else {
+                location = l.codeLValue(codeArray, location, env);
+                location = r.codeRValue(codeArray, location, env);
+                codeArray.put(location++, new IInstructions.Store());
+            }
+
 
             return location;
         }
@@ -1331,6 +1406,11 @@ public class AbsSyn {
 
             return this;
         }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
+            throw new RuntimeException("callCommand code-gen not yet implemented");
+        }
     }
 
     public interface IDebugInCommand extends ICommand {
@@ -1358,8 +1438,14 @@ public class AbsSyn {
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeLValue(codeArray, location, env);
-            // todo differentiate between bool and int expressions, and maybe add better label for input
-            codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
+            Types type = expression.getType(env.getSymbolTable());
+            switch (type.getType()) {
+                case "INTEGER" -> codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
+                default -> throw new RuntimeException("Can only debugin integer or booleans");
+            }
+
+            // todo maybe add better label for input
             return location;
         }
     }
@@ -1386,20 +1472,30 @@ public class AbsSyn {
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeRValue(codeArray, location, env);
-            // todo differentiate between bool and int expressions, and maybe add better label for input
-            codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+            Types type = expression.getType(env.getSymbolTable());
+            switch (type.getType()) {
+                case "INTEGER" -> codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
+                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
+                default -> /* todo record debugout */ throw new RuntimeException("type not yet implememnted for debugout: " + type.getType());
+            }
+
+            // todo maybe add better label for input
+
             return location;
         }
     }
 
     public interface IProgram extends IAbsSynNode  {
-        public IProgram check() throws TypeError, ContextError;
+        IProgram check() throws TypeError, ContextError;
+        Map<String, VariableSignature> getSymbolTable();
     }
     public static class Program implements IProgram {
         public String name;
         public List<IProgramParameter> programParameters;
         public List<IDeclaration> globalDeclarations;
         public List<ICommand> commands;
+
+        public Map<String, VariableSignature> symbolTable = null;
 
         public Program(String name, List<IProgramParameter> programParameters, List<IDeclaration> globalDeclarations, List<ICommand> commands) {
             this.name = name;
@@ -1413,7 +1509,7 @@ public class AbsSyn {
             procedureMap = new HashMap<>();
             recordMap = new HashMap<>();
 
-            Map<String, VariableSignature> symbolTable = new HashMap<>();
+            symbolTable = new HashMap<>();
 
             List<IProgramParameter> newParams = new LinkedList<>();
             for (IProgramParameter pp : programParameters) {
@@ -1442,14 +1538,29 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public Map<String, VariableSignature> getSymbolTable() {
+            return symbolTable;
+        }
+
+        @Override
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             if (!programParameters.isEmpty()) throw new RuntimeException("program params are not yet implemented");
 
             for (IDeclaration declaration : globalDeclarations) {
                 if (declaration instanceof StorageDeclaration) {
-                    //StorageDeclaration storageDeclaration = (StorageDeclaration) declaration;
-                    codeArray.put(location++, new IInstructions.AllocBlock(1));
+                    VariableSignature signature = ((StorageDeclaration) declaration).getSignature();
+                    int storeSize = 1;
+                    if (signature.getType().getRecordName() != null) {
+                        RecordSignature record = recordMap.get(signature.getType().getRecordName());
+
+                        storeSize = record.getRecordSize(recordMap);
+                    }
+
+
+                    codeArray.put(location++, new IInstructions.AllocBlock(storeSize));
                     // todo maybe sum up all store decls and produce only one allocBlock instruction?
+                } else if (declaration instanceof RecordShapeDeclaration) {
+                    // skip record decls
                 } else {
                     // todo, maybe we can ignore some other declarations (like record shape) as they produce no code?
                     throw new RuntimeException("Global declaration not yet implemented:" + declaration.getClass().getSimpleName());

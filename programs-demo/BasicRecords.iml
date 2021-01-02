@@ -1,0 +1,18 @@
+program BasicRecords()
+global
+  record direction2D(x:int32, y:int32);
+  record two(first:direction2D, second:direction2D);
+  var vec:two
+do
+  vec init := two(direction2D(1, 2),direction2D(3, -4));
+  if vec.first.x > vec.second.y then
+    debugout 123
+  else
+    debugout 321
+  endif;
+  debugout -4;
+  debugout vec.first.x;
+  debugout vec.first.y;
+  debugout vec.second.x;
+  debugout vec.second.y
+endprogram
