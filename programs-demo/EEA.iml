@@ -1,0 +1,68 @@
+program extendedEuclidianAlgorithm ()
+global
+    record eeaResult(gcd: int1024, x0: int1024, y0: int1024);
+
+    // Extended euclidian algorithm in a function
+    fun eea(num1: int1024, num2: int1024) returns const result:eeaResult
+    local
+        a: int1024; b: int1024; x0: int1024; y0: int1024; x1: int1024; y1: int1024; q: int1024; rest: int1024;
+        tmpX: int1024; tmpY: int1024
+    do
+        // Check that num1 and num2 aren't 0
+        if num1 = 0 \/? num2 = 0 then
+            // Since there are no exceptions; Return 0 result
+            result init := eeaResult (0, 0, 0)
+        else
+            a init := 0;
+            b init := num2;
+            x0 init := 1;
+            y0 init := 0;
+            x1 init := 0;
+            y1 init := 1;
+            q init := num1 divT num2;
+            rest init := num1 modT num2;
+
+            // Swap variables in the loo
+            tmpX init := 0;
+            tmpY init := 0;
+
+            // Run the algorithm until there is no rest and the gcd has been found
+            while rest > 0 do
+                // Shift x0, x1, y0, y1
+                tmpX := x1;
+                tmpY := y1;
+                x1 := x0 - x1 * q;
+                y1 := y0 - y1 * q;
+                x0 := tmpX;
+                y0 := tmpY;
+
+                // Shift b -> a | rest -> b
+                a := b;
+                b := rest;
+
+                // prepare the next computation
+                q := a divT b;
+                rest := a modT b
+            endwhile;
+
+            if x1 < 0 then
+                x1 := x1 + num2
+            endif;
+            if y1 < 0 then
+                y1 := y1 + num2
+            endif;
+
+            result init := eeaResult (b, x1, y1)
+        endif
+    endfun;
+
+    const num1: int1024;
+    const num2: int1024;
+
+    const result: eeaResult
+do
+    debugin num1 init;
+    debugin num2 init;
+    result := eea(num1, num2);
+    debugout result.gcd
+endprogram
