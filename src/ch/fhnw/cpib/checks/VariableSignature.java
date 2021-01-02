@@ -1,5 +1,6 @@
 package ch.fhnw.cpib.checks;
 
+import ch.fhnw.cpib.checks.types.ICodeType;
 import ch.fhnw.cpib.lexer.tokens.Changemode;
 import ch.fhnw.cpib.lexer.tokens.Flowmode;
 import ch.fhnw.cpib.lexer.tokens.Mechmode;
@@ -11,7 +12,7 @@ public class VariableSignature {
 
     private boolean initialized;
 
-    private final Types type;
+    private final ICodeType type;
     private final Flowmode.Attr flowMode;
     private final Changemode.Attr changeMode;
     private final Mechmode.Attr mechMode;
@@ -19,7 +20,7 @@ public class VariableSignature {
     private AccessMode accessMode;
     private Scope scope;
 
-    public VariableSignature(Types type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode) {
+    public VariableSignature(ICodeType type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode) {
         this.type = type;
         this.flowMode = Objects.requireNonNullElse(flowMode, Flowmode.Attr.IN);
         this.changeMode = Objects.requireNonNullElse(changeMode, Changemode.Attr.CONST);
@@ -30,11 +31,11 @@ public class VariableSignature {
         this.scope = null;
     }
 
-    public VariableSignature(Types type) {
+    public VariableSignature(ICodeType type) {
         this(type, null, null, null);
     }
 
-    public VariableSignature(Types type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode, AccessMode accessMode, Scope scope) {
+    public VariableSignature(ICodeType type, Flowmode.Attr flowMode, Changemode.Attr changeMode, Mechmode.Attr mechMode, AccessMode accessMode, Scope scope) {
         this(type, flowMode, changeMode, mechMode);
 
         // TODO remove this constructor if it can be calculated based on the first 4 params
@@ -58,7 +59,7 @@ public class VariableSignature {
         this.addr = addr;
     }
 
-    public Types getType() {
+    public ICodeType getType() {
         return type;
     }
 
