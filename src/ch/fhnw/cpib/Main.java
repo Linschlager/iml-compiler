@@ -36,16 +36,7 @@ public class Main {
         var programToCompile = compile(file.getFileName().toString(), Files.readString(file));
 
         ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
-        programToCompile.code(codeArray, 0, new Environment(programToCompile.getSymbolTable()) {
-            @Override
-            public IdentifierInfo getIdentifierInfo(String ident) {
-                return switch (ident) {
-                    case "x", "vec" -> new IdentifierInfo(0, false, true);
-                    case "y" -> new IdentifierInfo(1, false, true);
-                    default -> throw new IllegalStateException("Unexpected value: " + ident);
-                };
-            }
-        });
+        programToCompile.code(codeArray, 0, new Environment(programToCompile.getSymbolTable()));
         codeArray.resize();
 
         new VirtualMachine(codeArray, 100_000);

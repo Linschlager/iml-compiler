@@ -1440,8 +1440,8 @@ public class AbsSyn {
             location = expression.codeLValue(codeArray, location, env);
             Types type = expression.getType(env.getSymbolTable());
             switch (type.getType()) {
-                case "INTEGER" -> codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
-                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
+                case "INTEGER" -> codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
+                case "BOOLEAN" -> codeArray.put(location++, new IInstructions.InputBool(expression.toString()));
                 default -> throw new RuntimeException("Can only debugin integer or booleans");
             }
 
@@ -1476,13 +1476,26 @@ public class AbsSyn {
             switch (type.getType()) {
                 case "INTEGER" -> codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));
                 case "BOOLEAN" -> codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
-                default -> /* todo record debugout */ throw new RuntimeException("type not yet implememnted for debugout: " + type.getType());
+                case "Record" -> {
+                    /*RecordSignature recordSignature = recordMap.get(type.getRecordName());
+                    System.out.println(recordSignature);
+                    for (RecordSignature.RecordField field : recordSignature.fields) {
+                        if (field.type.getRecordName() == null) {
+
+                        }
+                    }*/
+                    // todo record
+                    throw new RuntimeException("type not yet implemented for debugout: Record");
+                }
+                default -> throw new RuntimeException("type not yet implemented for debugout: " + type.getType());
             }
 
             // todo maybe add better label for input
 
             return location;
         }
+
+
     }
 
     public interface IProgram extends IAbsSynNode  {
@@ -1546,6 +1559,7 @@ public class AbsSyn {
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             if (!programParameters.isEmpty()) throw new RuntimeException("program params are not yet implemented");
 
+            int globalStoreAddress = 0;
             for (IDeclaration declaration : globalDeclarations) {
                 if (declaration instanceof StorageDeclaration) {
                     VariableSignature signature = ((StorageDeclaration) declaration).getSignature();
@@ -1556,8 +1570,9 @@ public class AbsSyn {
                         storeSize = record.getRecordSize(recordMap);
                     }
 
-
+                    signature.setAddr(globalStoreAddress);
                     codeArray.put(location++, new IInstructions.AllocBlock(storeSize));
+                    globalStoreAddress += storeSize;
                     // todo maybe sum up all store decls and produce only one allocBlock instruction?
                 } else if (declaration instanceof RecordShapeDeclaration) {
                     // skip record decls

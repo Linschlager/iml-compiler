@@ -17,7 +17,7 @@ public class Types {
         allTypes.put("int1024", INTEGER);
     }
 
-    private final String type;
+    private final String type; // BOOLEAN, INTEGER or Record
     private final String recordName;
     public Types(String type) {
         this(type, null);

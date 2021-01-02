@@ -1,5 +1,7 @@
 package ch.fhnw.cpib.codeGen;
 
+import ch.fhnw.cpib.checks.AccessMode;
+import ch.fhnw.cpib.checks.Scope;
 import ch.fhnw.cpib.checks.VariableSignature;
 
 import java.util.Map;
@@ -30,6 +32,7 @@ public class Environment {
     }
 
     public IdentifierInfo getIdentifierInfo(String ident) {
-        throw new RuntimeException("Not yet implemented");
+        VariableSignature signature = symbolTable.get(ident);
+        return new IdentifierInfo(signature.getAddr(), signature.getScope() == Scope.LOCAL, signature.getAccessMode() != AccessMode.INDIRECT);
     }
 }
