@@ -64,5 +64,5 @@ do
     debugin num1 init;
     debugin num2 init;
     result := eea(num1, num2);
-    debugout result.gcd
+    debugout result
 endprogram

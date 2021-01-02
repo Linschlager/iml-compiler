@@ -9,6 +9,8 @@ import java.util.Objects;
 public class VariableSignature {
     private int addr; // Written during codegen
 
+    private boolean initialized;
+
     private final Types type;
     private final Flowmode.Attr flowMode;
     private final Changemode.Attr changeMode;
@@ -38,6 +40,14 @@ public class VariableSignature {
         // TODO remove this constructor if it can be calculated based on the first 4 params
         this.accessMode = accessMode;
         this.scope = scope;
+    }
+
+
+    public boolean isInitialized() {
+        return initialized;
+    }
+    public void initialize() {
+        initialized = true;
     }
 
     public int getAddr() {
