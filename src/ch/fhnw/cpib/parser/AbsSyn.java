@@ -9,10 +9,7 @@ import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray.CodeTooSmallError;
 import ch.fhnw.lederer.virtualmachineFS2015.IInstructions;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AbsSyn {
 
@@ -34,7 +31,7 @@ public class AbsSyn {
     private static Map<String, RecordSignature> recordMap;
 
     public interface IType {
-        public Types convertType();
+        Types convertType();
     }
     public static class TraditionalType implements IType {
         public Type type;
@@ -127,8 +124,8 @@ public class AbsSyn {
     }
 
     public interface ITypedIdentifier {
-        public String getName();
-        public Types getType();
+        String getName();
+        Types getType();
     }
     public static class TypedIdentifier implements ITypedIdentifier {
         public String name;
@@ -151,9 +148,9 @@ public class AbsSyn {
     }
 
     public interface IProgramParameter {
-        public String getName();
-        public IProgramParameter check(Map<String, VariableSignature> parentScope) throws ContextError;
-        public VariableSignature getSignature();
+        String getName();
+        IProgramParameter check(Map<String, VariableSignature> parentScope) throws ContextError;
+        VariableSignature getSignature();
     }
 
     public static class ProgramParameter implements IProgramParameter {
@@ -187,9 +184,9 @@ public class AbsSyn {
     }
 
     public interface IParameter {
-        public IParameter check(Map<String, VariableSignature> parentScope) throws ContextError;
-        public String getName();
-        public VariableSignature getSignature();
+        IParameter check(Map<String, VariableSignature> parentScope) throws ContextError;
+        String getName();
+        VariableSignature getSignature();
     }
 
     public static class Parameter implements IParameter {
@@ -226,9 +223,9 @@ public class AbsSyn {
     }
 
     public interface IGlobalImport {
-        public IGlobalImport check(Map<String, VariableSignature> parentScope) throws ContextError;
-        public String getName();
-        public VariableSignature getSignature(VariableSignature outside);
+        IGlobalImport check(Map<String, VariableSignature> parentScope) throws ContextError;
+        String getName();
+        VariableSignature getSignature(VariableSignature outside);
     }
 
     public static class GlobalImport implements IGlobalImport {
@@ -264,13 +261,13 @@ public class AbsSyn {
     }
 
     public interface IDeclaration {
-        public IDeclaration check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        IDeclaration check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
     }
 
     public interface IStorageDeclaration extends IDeclaration {
-        public String getName();
-        public IStorageDeclaration check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
-        public VariableSignature getSignature();
+        String getName();
+        IStorageDeclaration check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        VariableSignature getSignature();
     }
 
     public static class StorageDeclaration implements IStorageDeclaration {
@@ -495,13 +492,13 @@ public class AbsSyn {
     }
 
     public interface IExpression {
-        public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
 
-        public Types getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        Types getType(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
 
-        public boolean isValidLeft();
+        boolean isValidLeft();
 
-        public boolean isValidRight();
+        boolean isValidRight();
 
         int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
         int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
@@ -774,7 +771,7 @@ public class AbsSyn {
 
         @Override
         public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            throw new RuntimeException("FunctionCallExpression cant be used as l-value");
+            throw new RuntimeException("RecordCallExpression cant be used as l-value");
         }
 
         @Override
@@ -852,7 +849,9 @@ public class AbsSyn {
         default boolean isValidRight() {
             return true;
         }
-    }public interface IMultiplicationDyadicExpression extends IDyadicExpression {}
+    }
+
+    public interface IMultiplicationDyadicExpression extends IDyadicExpression {}
     public static class MultiplicationDyadicExpression implements IMultiplicationDyadicExpression {
         public MultOpr.Attr operator;
         public IExpression l;
@@ -1089,7 +1088,7 @@ public class AbsSyn {
             return this;
         }
 
-        // TODO clean this shit up
+        // TODO clean this mess up
         @Override
         public Types getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
             var signature = parentScope.get(variableName);
@@ -1136,7 +1135,7 @@ public class AbsSyn {
     }
 
     public interface ICommand extends IAbsSynNode  {
-        public ICommand check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
+        ICommand check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError;
     }
     public interface ISkipCommand extends ICommand {}
     public static class SkipCommand implements ISkipCommand {
@@ -1233,7 +1232,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = condition.codeRValue(codeArray, location, env);
             int jumpLocation = location++;
             for (ICommand command : commands) {
@@ -1281,7 +1280,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             int conditionLocation = location;
             location = condition.codeRValue(codeArray, location, env);
             int jumpLocation = location++;
@@ -1357,7 +1356,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeLValue(codeArray, location, env);
             // todo differentiate between bool and int expressions, and maybe add better label for input
             codeArray.put(location++, new IInstructions.InputInt(expression.toString()));
@@ -1385,7 +1384,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = expression.codeRValue(codeArray, location, env);
             // todo differentiate between bool and int expressions, and maybe add better label for input
             codeArray.put(location++, new IInstructions.OutputInt(expression.toString()));

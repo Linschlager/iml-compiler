@@ -11,7 +11,7 @@ public class Scanner implements IScanner {
     private final CharSequence input;
 
     public Scanner(CharSequence input) {
-        this.input = input + " "; // Safeguard
+        this.input = input + ""; // Safeguard
     }
 
     public ITokenList scan() throws LexicalError {

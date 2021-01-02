@@ -8,7 +8,7 @@ import java.util.Objects;
 
 public class ConcSyn {
     interface IType {
-        public AbsSyn.IType toAbsSyn();
+        AbsSyn.IType toAbsSyn();
     }
     static class TraditionalType implements IType {
         public Type type;
@@ -28,7 +28,7 @@ public class ConcSyn {
     }
 
     interface IOptFlowmode {
-        public AbsSyn.IFlowMode toAbsSyn();
+        AbsSyn.IFlowMode toAbsSyn();
     }
     static class OptFlowmode implements IOptFlowmode {
         public Flowmode flowmode;
@@ -50,7 +50,7 @@ public class ConcSyn {
     }
 
     interface IOptMechmode {
-        public AbsSyn.IMechMode toAbsSyn();
+        AbsSyn.IMechMode toAbsSyn();
     }
     static class OptMechmode implements IOptMechmode {
         public Mechmode mechmode;
@@ -71,7 +71,7 @@ public class ConcSyn {
     }
 
     interface IOptChangemode {
-        public AbsSyn.IChangeMode toAbsSyn();
+        AbsSyn.IChangeMode toAbsSyn();
     }
     static class OptChangemode implements IOptChangemode {
         public Changemode changemode;
@@ -92,7 +92,7 @@ public class ConcSyn {
     }
 
     interface ITypedIdent {
-        public AbsSyn.ITypedIdentifier toAbsSyn();
+        AbsSyn.ITypedIdentifier toAbsSyn();
     }
     static class TypedIdent implements ITypedIdent {
         public Identifier identifier;
@@ -105,7 +105,7 @@ public class ConcSyn {
     }
 
     interface IProgParam {
-        public AbsSyn.IProgramParameter toAbsSyn();
+        AbsSyn.IProgramParameter toAbsSyn();
     }
     static class ProgParam implements IProgParam {
         public IOptFlowmode optFlowmode;
@@ -122,7 +122,7 @@ public class ConcSyn {
         }
     }
     interface IOptProgParamRepCommaProgParam {
-        public List<AbsSyn.IProgramParameter> toAbsSyn();
+        List<AbsSyn.IProgramParameter> toAbsSyn();
     }
     static class OptProgParamRepCommaProgParam implements IOptProgParamRepCommaProgParam {
         public IProgParam progParam;
@@ -145,7 +145,7 @@ public class ConcSyn {
     }
 
     interface IProgParamList {
-        public List<AbsSyn.IProgramParameter> toAbsSyn();
+        List<AbsSyn.IProgramParameter> toAbsSyn();
     }
     static class ProgParamList implements IProgParamList {
         public IOptProgParamRepCommaProgParam optProgParamRepCommaProgParam;
@@ -157,7 +157,7 @@ public class ConcSyn {
     }
 
     interface IParam {
-        public AbsSyn.IParameter toAbsSyn();
+        AbsSyn.IParameter toAbsSyn();
     }
     static class Param implements IParam {
         IOptFlowmode optFlowmode;
@@ -181,7 +181,7 @@ public class ConcSyn {
     }
 
     interface IOptParamRepCommaParam {
-        public List<AbsSyn.IParameter> toAbsSyn();
+        List<AbsSyn.IParameter> toAbsSyn();
     }
     static class OptParamRepCommaParam implements IOptParamRepCommaParam {
         IParam param;
@@ -204,7 +204,7 @@ public class ConcSyn {
     }
 
     interface IParamList {
-        public List<AbsSyn.IParameter> toAbsSyn();
+        List<AbsSyn.IParameter> toAbsSyn();
     }
     static class ParamList implements IParamList {
         IOptParamRepCommaParam optParamRepCommaParam;
@@ -216,7 +216,7 @@ public class ConcSyn {
     }
 
     interface IGlobImp {
-        public AbsSyn.IGlobalImport toAbsSyn();
+        AbsSyn.IGlobalImport toAbsSyn();
     }
     static class GlobImp implements IGlobImp {
         IOptFlowmode optFlowmode;
@@ -234,7 +234,7 @@ public class ConcSyn {
     }
 
     interface IGlobImps {
-        public List<AbsSyn.IGlobalImport> toAbsSyn();
+        List<AbsSyn.IGlobalImport> toAbsSyn();
     }
     static class GlobImps implements IGlobImps {
         IGlobImp globImp;
@@ -257,7 +257,7 @@ public class ConcSyn {
     }
 
     interface IOptGlobalGlobImps {
-        public List<AbsSyn.IGlobalImport> toAbsSyn();
+        List<AbsSyn.IGlobalImport> toAbsSyn();
     }
     static class OptGlobalGlobImps implements IOptGlobalGlobImps {
         IGlobImps globImps;
@@ -275,7 +275,7 @@ public class ConcSyn {
     }
 
     interface ICpsStoDecl {
-        public List<AbsSyn.IStorageDeclaration> toAbsSyn();
+        List<AbsSyn.IStorageDeclaration> toAbsSyn();
     }
     static class CpsStoDecl implements ICpsStoDecl {
         IStoDecl stoDecl;
@@ -298,7 +298,7 @@ public class ConcSyn {
     }
 
     interface IOptLocalCpsStoDecl {
-        public List<AbsSyn.IStorageDeclaration> toAbsSyn();
+        List<AbsSyn.IStorageDeclaration> toAbsSyn();
     }
     static class OptLocalCpsStoDecl implements IOptLocalCpsStoDecl {
         ICpsStoDecl cpsStoDecl;
@@ -316,7 +316,7 @@ public class ConcSyn {
     }
 
     interface ICpsTypedIdent {
-        public List<AbsSyn.ITypedIdentifier> toAbsSyn();
+        List<AbsSyn.ITypedIdentifier> toAbsSyn();
     }
     static class CpsTypedIdent implements ICpsTypedIdent {
         ITypedIdent typedIdent;
@@ -339,11 +339,11 @@ public class ConcSyn {
     }
 
     interface IDecl {
-        public AbsSyn.IDeclaration toAbsSyn();
+        AbsSyn.IDeclaration toAbsSyn();
     }
     interface IStoDecl extends IDecl {
         @Override
-        public AbsSyn.IStorageDeclaration toAbsSyn();
+        AbsSyn.IStorageDeclaration toAbsSyn();
     }
     static class StoDecl implements IStoDecl {
         public IOptChangemode optChangemode;
@@ -359,7 +359,7 @@ public class ConcSyn {
     }
     interface IFunDecl extends IDecl {
         @Override
-        public AbsSyn.IFunctionDeclaration toAbsSyn();
+        AbsSyn.IFunctionDeclaration toAbsSyn();
     }
     static class FunDecl implements IFunDecl {
         Identifier name;
@@ -421,7 +421,7 @@ public class ConcSyn {
     }
 
     interface ICpsDecl {
-        public List<AbsSyn.IDeclaration> toAbsSyn();
+        List<AbsSyn.IDeclaration> toAbsSyn();
     }
     static class CpsDecl implements ICpsDecl {
         public IDecl decl;
@@ -444,7 +444,7 @@ public class ConcSyn {
     }
 
     interface IOptGlobalCpsDecl {
-        public List<AbsSyn.IDeclaration> toAbsSyn();
+        List<AbsSyn.IDeclaration> toAbsSyn();
     }
     static class OptGlobalCpsDecl implements IOptGlobalCpsDecl {
         public ICpsDecl cpsDecl;
@@ -462,7 +462,7 @@ public class ConcSyn {
     }
 
     interface IOptExprRepCommaExpr {
-        public List<AbsSyn.IExpression> toAbsSyn();
+        List<AbsSyn.IExpression> toAbsSyn();
     }
     static class OptExprRepCommaExpr implements IOptExprRepCommaExpr {
         IExpr expression;
@@ -485,7 +485,7 @@ public class ConcSyn {
     }
 
     interface IMonadicOpr {
-        public AbsSyn.IMonadicOperator toAbsSyn();
+        AbsSyn.IMonadicOperator toAbsSyn();
     }
     static class NotMonadicOpr implements IMonadicOpr {
         @Override
@@ -501,11 +501,11 @@ public class ConcSyn {
     }
 
     interface IOptInitOrExpressionListOrRecordAccess {
-        public AbsSyn.IExpression toAbsSyn(String name);
+        AbsSyn.IExpression toAbsSyn(String name);
     }
     interface IInit extends IOptInitOrExpressionListOrRecordAccess {
         @Override
-        public AbsSyn.IExpression toAbsSyn(String name);
+        AbsSyn.IExpression toAbsSyn(String name);
     }
     static class Init implements IInit {
         @Override
@@ -523,7 +523,7 @@ public class ConcSyn {
         }
     }
     interface IExprList {
-        public List<AbsSyn.IExpression> toAbsSyn();
+        List<AbsSyn.IExpression> toAbsSyn();
     }
     static class ExprList implements IExprList {
         IOptExprRepCommaExpr optExprRepCommaExpr;
@@ -534,7 +534,7 @@ public class ConcSyn {
         }
     }
     interface IRecordAccess extends IOptInitOrExpressionListOrRecordAccess {
-        public AbsSyn.IRecordAccessExpression toAbsSyn(String recordName);
+        AbsSyn.IRecordAccessExpression toAbsSyn(String recordName);
     }
     static class RecordAccess implements IRecordAccess {
         Identifier identifier;
@@ -564,7 +564,7 @@ public class ConcSyn {
     }
 
     interface IFactor {
-        public AbsSyn.IExpression toAbsSyn();
+        AbsSyn.IExpression toAbsSyn();
     }
     interface ILiteralFactor extends IFactor {}
     static class LiteralFactor implements ILiteralFactor {
@@ -612,7 +612,7 @@ public class ConcSyn {
     }
 
     interface IRepMultOprFactor {
-        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression factor);
+        AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression factor);
     }
     static class RepMultOprFactor implements IRepMultOprFactor {
         MultOpr multOpr;
@@ -645,7 +645,7 @@ public class ConcSyn {
     }
 
     interface ITerm3 {
-        public AbsSyn.IExpression toAbsSyn();
+        AbsSyn.IExpression toAbsSyn();
     }
     static class Term3 implements ITerm3 {
         IFactor factor;
@@ -662,7 +662,7 @@ public class ConcSyn {
     }
 
     interface IRepAddOprTerm3 {
-        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+        AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
     }
     static class RepAddOprTerm3 implements IRepAddOprTerm3 {
         AddOpr addOpr;
@@ -695,7 +695,7 @@ public class ConcSyn {
     }
 
     interface ITerm2 {
-        public AbsSyn.IExpression toAbsSyn();
+        AbsSyn.IExpression toAbsSyn();
     }
     static class Term2 implements ITerm2 {
         ITerm3 term3;
@@ -708,7 +708,7 @@ public class ConcSyn {
     }
 
     interface IOptRelOprTerm2 {
-        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+        AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
     }
     static class OptRelOprTerm2 implements IOptRelOprTerm2 {
         RelOpr relOpr;
@@ -732,7 +732,7 @@ public class ConcSyn {
     }
 
     interface ITerm1 {
-        public AbsSyn.IExpression toAbsSyn();
+        AbsSyn.IExpression toAbsSyn();
     }
     static class Term1 implements ITerm1 {
         ITerm2 term2;
@@ -745,7 +745,7 @@ public class ConcSyn {
     }
 
     interface IRepBoolOprTerm1 {
-        public AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
+        AbsSyn.IExpression toAbsSyn(AbsSyn.IExpression lastFactor);
     }
     static class RepBoolOprTerm1 implements IRepBoolOprTerm1 {
         BoolOpr boolOpr;
@@ -778,7 +778,7 @@ public class ConcSyn {
     }
 
     interface IExpr {
-        public AbsSyn.IExpression toAbsSyn();
+        AbsSyn.IExpression toAbsSyn();
     }
     static class Expr implements IExpr {
         ITerm1 term1;
@@ -791,7 +791,7 @@ public class ConcSyn {
     }
 
     interface IOptElseCpsCmd {
-        public List<AbsSyn.ICommand> toAbsSyn();
+        List<AbsSyn.ICommand> toAbsSyn();
     }
     static class OptElseCpsCmd implements IOptElseCpsCmd {
         ICpsCmd cpsCmd;
@@ -809,7 +809,7 @@ public class ConcSyn {
     }
 
     interface IRepCommaIdents {
-        public List<String> toAbsSyn();
+        List<String> toAbsSyn();
     }
     static class RepCommaIdents implements IRepCommaIdents {
         Identifier identifier;
@@ -832,7 +832,7 @@ public class ConcSyn {
     }
 
     interface IOptGlobInits {
-        public List<String> toAbsSyn();
+        List<String> toAbsSyn();
     }
     static class OptGlobInits implements IOptGlobInits {
         Identifier identifier;
@@ -855,7 +855,7 @@ public class ConcSyn {
     }
 
     interface ICmd {
-        public AbsSyn.ICommand toAbsSyn();
+        AbsSyn.ICommand toAbsSyn();
     }
     static class SkipCmd implements ICmd {
         @Override
@@ -865,7 +865,7 @@ public class ConcSyn {
     }
     interface IAssignmentCmd extends ICmd {
         @Override
-        public AbsSyn.IAssignmentCommand toAbsSyn();
+        AbsSyn.IAssignmentCommand toAbsSyn();
     }
     static class AssignmentCmd implements IAssignmentCmd {
         IExpr expr1;
@@ -881,7 +881,7 @@ public class ConcSyn {
     }
     interface IIfCmd extends ICmd {
         @Override
-        public AbsSyn.IIfCommand toAbsSyn();
+        AbsSyn.IIfCommand toAbsSyn();
     }
     static class IfCmd implements IIfCmd {
         IExpr conditionExpr;
@@ -899,7 +899,7 @@ public class ConcSyn {
     }
     interface IWhileCmd extends ICmd {
         @Override
-        public AbsSyn.IWhileCommand toAbsSyn();
+        AbsSyn.IWhileCommand toAbsSyn();
     }
     static class WhileCmd implements IWhileCmd {
         IExpr conditionExpr;
@@ -915,7 +915,7 @@ public class ConcSyn {
     }
     interface ICallCmd extends ICmd {
         @Override
-        public AbsSyn.ICallCommand toAbsSyn();
+        AbsSyn.ICallCommand toAbsSyn();
     }
     static class CallCmd implements ICallCmd {
         Identifier identifier;
@@ -933,7 +933,7 @@ public class ConcSyn {
     }
     interface IDebugInCmd extends ICmd {
         @Override
-        public AbsSyn.IDebugInCommand toAbsSyn();
+        AbsSyn.IDebugInCommand toAbsSyn();
     }
     static class DebugInCmd implements IDebugInCmd {
         IExpr expr;
@@ -945,7 +945,7 @@ public class ConcSyn {
     }
     interface IDebugOutCmd extends ICmd {
         @Override
-        public AbsSyn.IDebugOutCommand toAbsSyn();
+        AbsSyn.IDebugOutCommand toAbsSyn();
     }
     static class DebugOutCmd implements IDebugOutCmd {
         IExpr expr;
@@ -980,7 +980,7 @@ public class ConcSyn {
     }
 
     public interface IProgram {
-        public AbsSyn.IProgram toAbsSyn();
+        AbsSyn.IProgram toAbsSyn();
     }
     static class Program implements IProgram {
         public Identifier identifier;
