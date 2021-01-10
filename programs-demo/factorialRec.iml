@@ -5,9 +5,13 @@ global
 
   fun factorial (n: int64) returns const product:int64
   do
-    product init := product * factorial(n - 1)
+    if n > 0 then
+      product init := n * factorial(n - 1)
+    else
+      product init := 1
+    endif
   endfun
 do
   debugin n init;
-  debugout factorial(10)
+  debugout factorial(n)
 endprogram
