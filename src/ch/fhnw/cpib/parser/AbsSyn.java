@@ -306,7 +306,7 @@ public class AbsSyn {
         public List<IParameter> parameterList;
         public IStorageDeclaration returnValue;
         public List<IGlobalImport> globalImports;
-        public List<IStorageDeclaration> localImports;
+        public List<IStorageDeclaration> localImports; // todo rename this to local variables or whatever
         public List<ICommand> commands;
 
         public Map<String, VariableSignature> symbolTable = null;
@@ -344,7 +344,7 @@ public class AbsSyn {
 
             }
             returnValue = returnValue.check(parentScope);
-            FunctionSignature signature = new FunctionSignature(args, returnValue.getSignature(Scope.LOCAL).getType());
+            FunctionSignature signature = new FunctionSignature(args, symbolTable, returnValue.getSignature(Scope.LOCAL).getType());
             procedureMap.put(name, signature);
 
             symbolTable.put(returnValue.getName(), returnValue.getSignature(Scope.LOCAL));
@@ -414,9 +414,9 @@ public class AbsSyn {
                 var p = (Parameter) iParameter;
                 args.add(p.getSignature(Scope.LOCAL));
             }
-            procedureMap.put(name, new ProcedureSignature(args));
 
             symbolTable = new HashMap<>();
+            procedureMap.put(name, new ProcedureSignature(args, symbolTable));
 
             List<IParameter> newParams = new LinkedList<>();
             for (IParameter iParameter : parameters) {
@@ -743,7 +743,24 @@ public class AbsSyn {
 
         @Override
         public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            throw new RuntimeException("Not yet implemented");
+            FunctionSignature signature = (FunctionSignature)procedureMap.get(name);
+
+            int returnTypeSize = signature.returnType.getSize();
+            codeArray.put(location++, new IInstructions.AllocBlock(returnTypeSize));
+            // only support copy in params
+            signature.arguments.forEach(v -> {
+                if (v.getFlowMode() != Flowmode.Attr.IN || v.getMechMode() != Mechmode.Attr.COPY)
+                    throw new RuntimeException("only IN COPY params currently supported!");
+            });
+
+            for (IExpression argument : arguments) {
+                location = argument.codeRValue(codeArray, location, env);
+            }
+
+            signature.temporaryAddressLocations.add(location);
+            codeArray.put(location++, new IInstructions.Call(-1)); // this will be replaced later
+
+            return location;
         }
     }
 
@@ -1585,6 +1602,8 @@ public class AbsSyn {
                     // todo maybe sum up all store decls and produce only one allocBlock instruction?
                 } else if (declaration instanceof RecordShapeDeclaration) {
                     // skip record decls
+                } else if (declaration instanceof FunctionDeclaration) {
+                    // skip function decls here, they will be generated after main body
                 } else {
                     // todo, maybe we can ignore some other declarations (like record shape) as they produce no code?
                     throw new RuntimeException("Global declaration not yet implemented:" + declaration.getClass().getSimpleName());
@@ -1595,6 +1614,46 @@ public class AbsSyn {
                 location = command.code(codeArray, location, env);
             }
             codeArray.put(location++, new IInstructions.Stop());
+
+            for (IDeclaration declaration : globalDeclarations) {
+                if (declaration instanceof FunctionDeclaration) {
+                    FunctionDeclaration declaration1 = (FunctionDeclaration) declaration;
+                    procedureMap.get(declaration1.name).address = location;
+                    if (!declaration1.globalImports.isEmpty()) throw new RuntimeException("global imports not yet supported!");
+                    if (!declaration1.localImports.isEmpty()) throw new RuntimeException("local variables not yet supported!");
+
+                    int relAddress = 0;
+
+                    // set addresses for params
+                    for (int i = declaration1.parameterList.size() - 1; i >= 0; i--) {
+                        IParameter parameter = declaration1.parameterList.get(i);
+                        int size = parameter.getSignature(Scope.LOCAL).getType().getSize();
+                        relAddress -= size;
+                        declaration1.symbolTable.get(parameter.getName()).setAddr(relAddress);
+                    }
+
+                    // set address for return type
+                    IStorageDeclaration returnValue = declaration1.returnValue;
+                    int returnSize = returnValue.getSignature(Scope.LOCAL).getType().getSize();
+
+                    declaration1.symbolTable.get(returnValue.getName()).setAddr(relAddress - returnSize);
+
+                    var localEnv = new Environment(declaration1.symbolTable);
+
+
+                    for (ICommand command : declaration1.commands) {
+                        location = command.code(codeArray, location, localEnv);
+                    }
+                    codeArray.put(location++, new IInstructions.Return(-relAddress));
+                }
+            }
+
+            // replace placeholder function calls
+            for (Map.Entry<String, ProcedureSignature> signatureEntry : procedureMap.entrySet()) {
+                for (Integer temporaryAddressLocation : signatureEntry.getValue().temporaryAddressLocations) {
+                    codeArray.put(temporaryAddressLocation, new IInstructions.Call(signatureEntry.getValue().address));
+                }
+            }
 
             return location;
         }

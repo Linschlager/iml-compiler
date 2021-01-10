@@ -31,7 +31,8 @@ public class Main {
         //var file = Path.of("programs/Add17.iml");
         //var file = Path.of("programs/IfCmd.iml");
         //var file = Path.of("programs/WhileCmd.iml");
-        var file = Path.of("programs-demo/BasicRecords.iml");
+        //var file = Path.of("programs-demo/BasicRecords.iml");
+        var file = Path.of("programs/Add17Fun.iml");
 
         var programToCompile = compile(file.getFileName().toString(), Files.readString(file));
 
