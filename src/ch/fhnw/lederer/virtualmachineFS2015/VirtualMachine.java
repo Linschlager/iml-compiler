@@ -198,6 +198,19 @@ public class VirtualMachine implements IVirtualMachine {
         }
     }
 
+    // todo this was added
+    // store instruction with address on stack
+    // store (top of stack -> inside stack) operation
+    public class StoreRevExec extends StoreRev implements IExecInstr {
+        public void execute()
+        {
+            int address= Data.intGet(store[sp - 1]);
+            store[address]= store[sp - 2];
+            sp= sp - 2;
+            pc= pc + 1;
+        }
+    }
+
     // monadic instructions
 
     public class NegIntExec extends NegInt implements IExecInstr {

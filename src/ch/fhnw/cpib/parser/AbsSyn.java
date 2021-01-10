@@ -15,6 +15,7 @@ import ch.fhnw.lederer.virtualmachineFS2015.IInstructions;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class AbsSyn {
 
@@ -508,8 +509,8 @@ public class AbsSyn {
 
         boolean isValidRight();
 
-        int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
-        int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
+        int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError;
+        int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError;
     }
     public interface ILiteralExpression extends IExpression {}
     public interface IBoolLiteralExpression extends ILiteralExpression {}
@@ -669,9 +670,20 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            location = codeLValue(codeArray, location, env);
-            codeArray.put(location++, new IInstructions.Deref());
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError {
+            // todo deduplicate with record access
+            ICodeType type = getType(env.getSymbolTable());
+            if (type instanceof RecordCodeType) {
+                for (int i = 0; i < type.getSize(); i++) {
+                    location = codeLValue(codeArray, location, env); // hack: evaluate lValue multiple times
+                    codeArray.put(location++, new IInstructions.LoadImInt(i));
+                    codeArray.put(location++, new IInstructions.AddInt());
+                    codeArray.put(location++, new IInstructions.Deref());
+                }
+            } else {
+                location = codeLValue(codeArray, location, env);
+                codeArray.put(location++, new IInstructions.Deref());
+            }
             return location;
         }
     }
@@ -742,7 +754,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             FunctionSignature signature = (FunctionSignature)procedureMap.get(name);
 
             int returnTypeSize = signature.returnType.getSize();
@@ -800,29 +812,11 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            throw new RuntimeException("RecordCallExpression cant be used as r-value without using method codes()");
-        }
-
-        @FunctionalInterface
-        public interface ArgCodeGen {
-            int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError;
-        }
-
-        public List<ArgCodeGen> codes() {
-            List<ArgCodeGen> argCodes = new ArrayList<>();
-
-            // evaluate arguments in reverse order (no problem as expressions are pure) to match order of addresses on stack
-            for (int i = arguments.size() - 1; i >= 0; i--) {
-                IExpression expression = arguments.get(i);
-                if (expression instanceof RecordCallExpression) {
-                    argCodes.addAll(((RecordCallExpression) expression).codes());
-                } else {
-                    argCodes.add(expression::codeRValue);
-                }
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
+            for (IExpression expression : arguments) {
+                location =  expression.codeRValue(codeArray, location, env);
             }
-
-            return argCodes;
+            return location;
         }
     }
 
@@ -872,7 +866,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             if (operator instanceof NotMonadicOperator) {
                 codeArray.put(location++, new IInstructions.LoadImInt(1));
                 location = expression.codeRValue(codeArray, location, env); // assumed condition: this expression evaluates to a boolean
@@ -941,7 +935,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = l.codeRValue(codeArray, location, env);
             location = r.codeRValue(codeArray, location, env);
             switch (operator) {
@@ -993,7 +987,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = l.codeRValue(codeArray, location, env);
             location = r.codeRValue(codeArray, location, env);
             switch (operator) {
@@ -1054,7 +1048,7 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
             location = l.codeRValue(codeArray, location, env);
             location = r.codeRValue(codeArray, location, env);
 
@@ -1108,10 +1102,39 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            // todo conditional evaluation
-            // implement with conditional jumps to after all expressions, and evaluate current boolean result continuously
-            throw new RuntimeException("Not yet implemented");
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
+            switch (operator) {
+                case CAND -> {
+                    location = l.codeRValue(codeArray, location, env);
+                    int jumpLocation = location++;
+                    location = r.codeRValue(codeArray, location, env); // eval r otherwise
+                    int afterIfBodyJumpLocation = location++;
+                    int elseAddr = location;
+                    codeArray.put(location++, new IInstructions.LoadImInt(0)); // else evaluate to false
+                    int afterElseBodyLocation = location;
+
+                    codeArray.put(jumpLocation, new IInstructions.CondJump(elseAddr)); // jump to 0 if 0
+                    codeArray.put(afterIfBodyJumpLocation, new IInstructions.UncondJump(afterElseBodyLocation)); // jump to after zero
+                }
+                case COR -> {
+                    // calculate 1-l for cndJump
+                    codeArray.put(location++, new IInstructions.LoadImInt(1));
+                    location = l.codeRValue(codeArray, location, env);
+                    codeArray.put(location++, new IInstructions.SubInt());
+
+
+                    int jumpLocation = location++;
+                    location = r.codeRValue(codeArray, location, env); // eval r otherwise
+                    int afterIfBodyJumpLocation = location++;
+                    int elseAddr = location;
+                    codeArray.put(location++, new IInstructions.LoadImInt(1)); // else evaluate to true
+                    int afterElseBodyLocation = location;
+
+                    codeArray.put(jumpLocation, new IInstructions.CondJump(elseAddr)); // jump to 0 if 0
+                    codeArray.put(afterIfBodyJumpLocation, new IInstructions.UncondJump(afterElseBodyLocation)); // jump to after zero
+                }
+            }
+            return location;
         }
     }
 
@@ -1204,9 +1227,20 @@ public class AbsSyn {
         }
 
         @Override
-        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
-            location = codeLValue(codeArray, location, env);
-            codeArray.put(location++, new IInstructions.Deref());
+        public int codeRValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
+            // todo deduplicate with storeExpression
+            ICodeType type = getType(env.getSymbolTable());
+            if (type instanceof RecordCodeType) {
+                for (int i = 0; i < type.getSize(); i++) {
+                    location = codeLValue(codeArray, location, env); // hack: evaluate lValue multiple times
+                    codeArray.put(location++, new IInstructions.LoadImInt(i));
+                    codeArray.put(location++, new IInstructions.AddInt());
+                    codeArray.put(location++, new IInstructions.Deref());
+                }
+            } else {
+                location = codeLValue(codeArray, location, env);
+                codeArray.put(location++, new IInstructions.Deref());
+            }
             return location;
         }
     }
@@ -1270,31 +1304,22 @@ public class AbsSyn {
 
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
-            if (r instanceof RecordCallExpression) {
-                List<RecordCallExpression.ArgCodeGen> codeGens = ((RecordCallExpression) r).codes();
-                // load all addresses for all fields on stack (each increment of previous)
-                int recordSize = r.getType(env.getSymbolTable()).getSize();
-                assert recordSize == codeGens.size(); // Doesn't do anything
+            ICodeType rType = r.getType(env.getSymbolTable());
 
-                location = l.codeLValue(codeArray, location, env);
-                for (int i = 1; i < recordSize; i++) {
-                    codeArray.put(location++, new IInstructions.Dup());
-                    codeArray.put(location++, new IInstructions.LoadImInt(1));
+
+            if (rType instanceof RecordCodeType) {
+                location = r.codeRValue(codeArray, location, env);
+                for (int i = rType.getSize(); i > 0; i--) {
+                    location = l.codeLValue(codeArray, location, env); // hack: calculate rValue multiple times
+                    codeArray.put(location++, new IInstructions.LoadImInt(i-1)); // add offset for current field
                     codeArray.put(location++, new IInstructions.AddInt());
-                }
-                // dont use this location = r.codeRValue(codeArray, location, env);
-                // use special purpose method instead:
-                for (RecordCallExpression.ArgCodeGen codeGen : codeGens) {
-                    // store all evaluated arguments in order of fields
-                    location = codeGen.codeRValue(codeArray, location, env);
-                    codeArray.put(location++, new IInstructions.Store());
+                    codeArray.put(location++, new IInstructions.StoreRev()); // store reversed
                 }
             } else {
                 location = l.codeLValue(codeArray, location, env);
                 location = r.codeRValue(codeArray, location, env);
                 codeArray.put(location++, new IInstructions.Store());
             }
-
 
             return location;
         }
@@ -1509,15 +1534,16 @@ public class AbsSyn {
             } else if (type instanceof BoolCodeType) {
                 codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
             } else if (type instanceof RecordCodeType) {
-                // TODO records
-                /*RecordSignature recordSignature = recordMap.get(type.getRecordName());
-                System.out.println(recordSignature);
-                for (RecordSignature.RecordField field : recordSignature.fields) {
-                    if (field.type.getRecordName() == null) {
+                List<FieldDesc> fieldNames = getRecordFieldNames(type.getName());
 
+                for (int i = fieldNames.size() - 1; i >= 0; i--) {
+                    FieldDesc fieldDesc = fieldNames.get(i);
+                    if (fieldDesc.isInt) {
+                        codeArray.put(location++, new IInstructions.OutputInt(fieldDesc.name));
+                    } else {
+                        codeArray.put(location++, new IInstructions.OutputBool(fieldDesc.name));
                     }
-                }*/
-                throw new RuntimeException("type not yet implemented for debugout: Record");
+                }
             } else {
                 throw new RuntimeException("type not yet implemented for debugout: " + type.getName());
             }
@@ -1525,6 +1551,28 @@ public class AbsSyn {
             // todo maybe add better label for input
 
             return location;
+        }
+
+        private class FieldDesc {
+            public boolean isInt;
+            public String name;
+
+            public FieldDesc(boolean isInt, String name) {
+                this.isInt = isInt;
+                this.name = name;
+            }
+        }
+
+        private List<FieldDesc> getRecordFieldNames(String recordName) {
+            RecordSignature signature = recordMap.get(recordName);
+
+            return signature.fields.stream().flatMap(field -> {
+                if (field.type instanceof RecordCodeType) {
+                    return getRecordFieldNames(field.type.getName()).stream().peek(str -> str.name = field.name + "." + str.name);
+                } else {
+                    return Stream.of(new FieldDesc(field.type instanceof IntCodeType, field.name));
+                }
+            }).collect(Collectors.toList());
         }
     }
 
@@ -1593,7 +1641,7 @@ public class AbsSyn {
             int globalStoreAddress = 0;
             for (IDeclaration declaration : globalDeclarations) {
                 if (declaration instanceof StorageDeclaration) {
-                    VariableSignature signature = ((StorageDeclaration) declaration).getSignature(Scope.GLOBAL);
+                    VariableSignature signature = env.getSymbolTable().get(((StorageDeclaration) declaration).getName());
                     int storeSize = signature.getType().getSize();
 
                     signature.setAddr(globalStoreAddress);
@@ -1627,16 +1675,18 @@ public class AbsSyn {
                     // set addresses for params
                     for (int i = declaration1.parameterList.size() - 1; i >= 0; i--) {
                         IParameter parameter = declaration1.parameterList.get(i);
-                        int size = parameter.getSignature(Scope.LOCAL).getType().getSize();
+                        VariableSignature signature = declaration1.symbolTable.get(parameter.getName());
+                        int size = signature.getType().getSize();
                         relAddress -= size;
-                        declaration1.symbolTable.get(parameter.getName()).setAddr(relAddress);
+                        signature.setAddr(relAddress);
                     }
 
                     // set address for return type
                     IStorageDeclaration returnValue = declaration1.returnValue;
-                    int returnSize = returnValue.getSignature(Scope.LOCAL).getType().getSize();
+                    VariableSignature returnSignature = declaration1.symbolTable.get(returnValue.getName());
+                    int returnSize = returnSignature.getType().getSize();
 
-                    declaration1.symbolTable.get(returnValue.getName()).setAddr(relAddress - returnSize);
+                    returnSignature.setAddr(relAddress - returnSize);
 
                     var localEnv = new Environment(declaration1.symbolTable);
 

@@ -111,6 +111,16 @@ public interface IInstructions {
         }
     }
 
+    // todo this was added
+    // store instruction with address on stack
+    // store (top of stack -> inside stack) operation
+    class StoreRev implements IInstr {
+        public String toString() { return "StoreRev"; }
+        public IExecInstr toExecInstr(VirtualMachine vm) {
+            return vm.new StoreRevExec();
+        }
+    }
+
     // monadic instructions
 
     class NegInt implements IInstr {
