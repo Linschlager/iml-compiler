@@ -564,6 +564,13 @@ public class AbsSyn {
         }
 
         @Override
+        public String toString() {
+            return "IntLiteralExpression{" +
+                    "value='" + value + '\'' +
+                    '}';
+        }
+
+        @Override
         public IExpression check(Map<String, VariableSignature> parentScope) {
             return this;
         }
@@ -609,6 +616,14 @@ public class AbsSyn {
 
         private boolean isNotInScope(Map<String, VariableSignature> parentScope) {
             return !parentScope.containsKey(name);
+        }
+
+        @Override
+        public String toString() {
+            return "StoreExpression{" +
+                    "name='" + name + '\'' +
+                    ", init=" + init +
+                    '}';
         }
 
         @Override
@@ -708,6 +723,14 @@ public class AbsSyn {
         public FunctionCallExpression(String name, List<IExpression> arguments) {
             this.name = name;
             this.arguments = arguments;
+        }
+
+        @Override
+        public String toString() {
+            return "FunctionCallExpression{" +
+                    "name='" + name + '\'' +
+                    //", arguments=" + arguments +
+                    '}';
         }
 
         @Override
@@ -1156,6 +1179,14 @@ public class AbsSyn {
         public RecordAccessExpression(String variableName, List<String> fieldNames) {
             this.variableName = variableName;
             this.fieldNames = fieldNames;
+        }
+
+        @Override
+        public String toString() {
+            return "RecordAccessExpression{" +
+                    "variableName='" + variableName + '\'' +
+                    ", fieldNames=" + fieldNames +
+                    '}';
         }
 
         @Override
