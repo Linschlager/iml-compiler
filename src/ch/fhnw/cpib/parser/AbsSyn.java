@@ -207,8 +207,8 @@ public class AbsSyn {
 
         @Override
         public IParameter check(Map<String, VariableSignature> parentScope) throws ContextError {
-            if (parentScope.containsKey(typedIdentifier.getName())) {
-                // throw new ContextError(String.format("'%s' has already been declared", typedIdentifier.getName()));
+            if (this.flowMode instanceof InFlowMode && this.mechMode instanceof RefMechMode && this.changeMode instanceof VarChangeMode) {
+                throw new ContextError("IN REF VAR is invalid!");
             }
 
             return this;
@@ -344,15 +344,24 @@ public class AbsSyn {
                 args.add(p.getSignature(Scope.LOCAL));
 
             }
+
+            List<VariableSignature> gis = new LinkedList<>();
+            for (IGlobalImport iGlobalImport : globalImports) {
+                var g = (GlobalImport)iGlobalImport;
+                var o = parentScope.get(g.name);
+                var v = g.getSignature(o);
+                gis.add(v);
+            }
+
             returnValue = returnValue.check(parentScope);
-            FunctionSignature signature = new FunctionSignature(args, symbolTable, returnValue.getSignature(Scope.LOCAL).getType());
+            FunctionSignature signature = new FunctionSignature(gis, args, symbolTable, returnValue.getSignature(Scope.LOCAL).getType());
             procedureMap.put(name, signature);
 
             symbolTable.put(returnValue.getName(), returnValue.getSignature(Scope.LOCAL));
 
             List<IGlobalImport> newGlobImps = new LinkedList<>();
             for (IGlobalImport gi : globalImports) {
-                var newGi = gi.check(parentScope);
+                var newGi = gi.check(symbolTable);
                 var outside = parentScope.get(newGi.getName());
                 if (outside == null) {
                     throw new ContextError(String.format("Couldn't find '%s'", newGi.getName()));
@@ -415,9 +424,16 @@ public class AbsSyn {
                 var p = (Parameter) iParameter;
                 args.add(p.getSignature(Scope.LOCAL));
             }
+            List<VariableSignature> gi = new LinkedList<>();
+            for (IGlobalImport iGlobalImport : globalImports) {
+                var g = (GlobalImport)iGlobalImport;
+                var o = parentScope.get(g.name);
+                var v = g.getSignature(o);
+                gi.add(v);
+            }
 
             symbolTable = new HashMap<>();
-            procedureMap.put(name, new ProcedureSignature(args, symbolTable));
+            procedureMap.put(name, new ProcedureSignature(gi, args, symbolTable));
 
             List<IParameter> newParams = new LinkedList<>();
             for (IParameter iParameter : parameters) {
@@ -429,12 +445,12 @@ public class AbsSyn {
 
             List<IGlobalImport> newGlobImps = new LinkedList<>();
             for (IGlobalImport iGlobalImport : globalImports) {
-                var gi = iGlobalImport.check(symbolTable);
-                var outside = parentScope.get(gi.getName());
+                var g = iGlobalImport.check(symbolTable);
+                var outside = parentScope.get(g.getName());
                 if (outside == null)
-                    throw new ContextError(String.format("Couldn't find %s", gi.getName()));
-                symbolTable.put(gi.getName(), gi.getSignature(outside));
-                newGlobImps.add(gi);
+                    throw new ContextError(String.format("Couldn't find %s", g.getName()));
+                symbolTable.put(g.getName(), g.getSignature(outside));
+                newGlobImps.add(g);
             }
             globalImports = newGlobImps;
 
@@ -670,15 +686,19 @@ public class AbsSyn {
         @Override
         public int codeLValue(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError {
             Environment.IdentifierInfo info = env.getIdentifierInfo(name);
-            if (!info.isLocalScope && info.isDirectAccess) {
-                codeArray.put(location++, new IInstructions.LoadImInt(info.addr));
-            } else if (info.isLocalScope && info.isDirectAccess) {
-                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
-            } else if (info.isLocalScope && !info.isDirectAccess) {
-                codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
-                codeArray.put(location++, new IInstructions.Deref());
+            if (info.isLocalScope) {
+                if (info.isDirectAccess) {
+                    codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
+                } else {
+                    codeArray.put(location++, new IInstructions.LoadAddrRel(info.addr));
+                    codeArray.put(location++, new IInstructions.Deref());
+                }
             } else {
-                throw new RuntimeException("invalid identifier info found for var: " + name);
+                if (info.isDirectAccess) {
+                    codeArray.put(location++, new IInstructions.LoadImInt(info.addr));
+                } else {
+                    throw new RuntimeException("Invalid identifier info found for var: " + name);
+                }
             }
 
             return location;
@@ -747,8 +767,9 @@ public class AbsSyn {
                 return new RecordCallExpression(name, arguments).check(parentScope);
             }
 
-            // TODO checks
             var desiredArguments = procedureMap.get(name).arguments;
+            if (arguments.size() != desiredArguments.size())
+                throw new ContextError(name + ": expected " + desiredArguments.size() + " arguments. Found " + arguments.size());
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(parentScope);
                 var desiredType = desiredArguments.get(i).getType();
@@ -782,11 +803,6 @@ public class AbsSyn {
 
             int returnTypeSize = signature.returnType.getSize();
             codeArray.put(location++, new IInstructions.AllocBlock(returnTypeSize));
-            // only support copy in params
-            signature.arguments.forEach(v -> {
-                if (v.getFlowMode() != Flowmode.Attr.IN || v.getMechMode() != Mechmode.Attr.COPY)
-                    throw new RuntimeException("only IN COPY params currently supported!");
-            });
 
             for (IExpression argument : arguments) {
                 location = argument.codeRValue(codeArray, location, env);
@@ -813,6 +829,8 @@ public class AbsSyn {
         public IExpression check(Map<String, VariableSignature> parentScope) throws TypeError, ContextError {
 
             var desiredArguments = recordMap.get(name).fields;
+            if (arguments.size() != desiredArguments.size())
+                throw new ContextError(name + ": expected " + desiredArguments.size() + " arguments. Found " + arguments.size());
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(parentScope);
                 var desiredType = desiredArguments.get(i).type;
@@ -948,8 +966,11 @@ public class AbsSyn {
 
         @Override
         public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
-            // TODO Larger bit-size?
-            return l.getType(parentScope);
+            // Currently not used, future-proof; Use larger int type
+            IntCodeType lType = (IntCodeType)l.getType(parentScope);
+            IntCodeType rType = (IntCodeType)r.getType(parentScope);
+            int bits = Math.max(lType.getBits(), rType.getBits());
+            return new IntCodeType(bits);
         }
 
         @Override
@@ -1001,7 +1022,11 @@ public class AbsSyn {
 
         @Override
         public ICodeType getType(Map<String, VariableSignature> parentScope) throws ContextError, TypeError {
-            return l.getType(parentScope);
+            // Currently not used, future-proof; Use larger int type
+            IntCodeType lType = (IntCodeType)l.getType(parentScope);
+            IntCodeType rType = (IntCodeType)r.getType(parentScope);
+            int bits = Math.max(lType.getBits(), rType.getBits());
+            return new IntCodeType(bits);
         }
 
         @Override
@@ -1482,6 +1507,8 @@ public class AbsSyn {
             arguments = newArgs;
 
             var desiredArguments = procedureMap.get(name).arguments;
+            if (arguments.size() != desiredArguments.size())
+                throw new ContextError(name + ": expected " + desiredArguments.size() + " arguments. Found " + arguments.size());
             for (int i = 0; i < arguments.size(); i++) {
                 var actualType = arguments.get(i).getType(parentScope);
                 var desiredType = desiredArguments.get(i).getType();
@@ -1494,7 +1521,16 @@ public class AbsSyn {
 
         @Override
         public int code(ICodeArray codeArray, int location, Environment env) throws CodeTooSmallError, ContextError, TypeError {
-            throw new RuntimeException("callCommand code-gen not yet implemented");
+            ProcedureSignature signature = procedureMap.get(name);
+
+            for (IExpression argument : arguments) {
+                location = argument.codeRValue(codeArray, location, env);
+            }
+
+            signature.temporaryAddressLocations.add(location);
+            codeArray.put(location++, new IInstructions.Call(-1)); // this will be replaced later
+
+            return location;
         }
     }
 
@@ -1683,6 +1719,8 @@ public class AbsSyn {
                     // skip record decls
                 } else if (declaration instanceof FunctionDeclaration) {
                     // skip function decls here, they will be generated after main body
+                } else if (declaration instanceof ProcedureDeclaration) {
+                    // skip proc decls here, they will be generated after main body
                 } else {
                     // todo, maybe we can ignore some other declarations (like record shape) as they produce no code?
                     throw new RuntimeException("Global declaration not yet implemented:" + declaration.getClass().getSimpleName());
@@ -1698,15 +1736,25 @@ public class AbsSyn {
                 if (declaration instanceof FunctionDeclaration) {
                     FunctionDeclaration declaration1 = (FunctionDeclaration) declaration;
                     procedureMap.get(declaration1.name).address = location;
-                    if (!declaration1.globalImports.isEmpty()) throw new RuntimeException("global imports not yet supported!");
 
                     int relAddress = 0;
+
+                    // set addresses for global imports
+//                    for (int i = declaration1.globalImports.size() - 1; i >= 0; i--) {
+//                        IGlobalImport imp = declaration1.globalImports.get(i);
+//                        VariableSignature signature = getSymbolTable().get(imp.getName());
+//                        relAddress -= 1; // All relative addresses have size 1 (just the address)
+//                        signature.setAddr(relAddress);
+//                    }
 
                     // set addresses for params
                     for (int i = declaration1.parameterList.size() - 1; i >= 0; i--) {
                         IParameter parameter = declaration1.parameterList.get(i);
                         VariableSignature signature = declaration1.symbolTable.get(parameter.getName());
                         int size = signature.getType().getSize();
+                        if (signature.getMechMode() == Mechmode.Attr.REF) {
+                            size = 1; // All relative addresses have size 1 (just the address)
+                        }
                         relAddress -= size;
                         signature.setAddr(relAddress);
                     }
@@ -1736,6 +1784,48 @@ public class AbsSyn {
                         location = command.code(codeArray, location, localEnv);
                     }
                     codeArray.put(location++, new IInstructions.Return(-relAddress));
+                } else if (declaration instanceof ProcedureDeclaration) {
+                    ProcedureDeclaration declaration1 = (ProcedureDeclaration) declaration;
+                    procedureMap.get(declaration1.name).address = location;
+
+                    int relAddress = 0;
+                    // set addresses for global imports
+//                    for (int i = declaration1.globalImports.size() - 1; i >= 0; i--) {
+//                        IGlobalImport imp = declaration1.globalImports.get(i);
+//                        VariableSignature signature = getSymbolTable().get(imp.getName());
+//                        relAddress -= 1; // All relative addresses have size 1 (just the address)
+//                        signature.setAddr(relAddress);
+//                    }
+
+                    // set addresses for params
+                    for (int i = declaration1.parameters.size() - 1; i >= 0; i--) {
+                        IParameter parameter = declaration1.parameters.get(i);
+                        VariableSignature signature = declaration1.symbolTable.get(parameter.getName());
+                        int size = signature.getType().getSize();
+                        if (signature.getMechMode() == Mechmode.Attr.REF) {
+                            size = 1; // All relative addresses have size 1 (just the address)
+                        }
+                        relAddress -= size;
+                        signature.setAddr(relAddress);
+                    }
+
+                    // local vars
+                    int localStoreOffset = 3; // +2 for stored references of ep and pc above fp
+                    for (IStorageDeclaration localStore : declaration1.localImports) {
+                        VariableSignature signature = declaration1.symbolTable.get(localStore.getName());
+                        int storeSize = signature.getType().getSize();
+
+                        signature.setAddr(localStoreOffset);
+                        codeArray.put(location++, new IInstructions.AllocBlock(storeSize));
+                        localStoreOffset += storeSize;
+                    }
+
+                    var localEnv = new Environment(declaration1.symbolTable);
+
+                    for (ICommand command : declaration1.commands) {
+                        location = command.code(codeArray, location, localEnv);
+                    }
+                    codeArray.put(location++, new IInstructions.Return(-relAddress));
                 }
             }
 
@@ -1750,11 +1840,3 @@ public class AbsSyn {
         }
     }
 }
-/*
-    Recursive to List template
-            List<AbsSyn.I_Some_Type> list = new LinkedList<>();
-            list.add(someType.toAbsSyn());
-            List<AbsSyn.I_Some_Type> next = cps_Some_Type.toAbsSyn();
-            list.addAll(next);
-            return list;
- */

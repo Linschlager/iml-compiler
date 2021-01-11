@@ -31,11 +31,11 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        Test.test(); // Do extensive testing!
-        //Map<String, AbsSyn.IProgram> programMap = compileAllPrograms(); doesnt work, because it uses static variables
+        // Test.test(); // Do extensive testing!
 
         // Find the first program of that name in the list of parsed programs
-        var file = Path.of("programs-demo/Shapes.iml");
+        var file = Path.of("programs-demo/playground.iml");
+        // var file = Path.of("programs-demo/Shapes.iml");
         // var file = Path.of("programs-demo/BasicRecords.iml");
         // var file = Path.of("programs-demo/CompareVectors.iml");
         // var file = Path.of("programs-demo/EEA.iml");
@@ -45,6 +45,7 @@ public class Main {
         // var file = Path.of("programs/Factorial.iml");
         // var file = Path.of("programs/IfCmd.iml");
         // var file = Path.of("programs/WhileCmd.iml");
+        //var file = Path.of("programs/Add17Proc2.iml");
 
         try {
             var codeArray = compile(Files.readString(file));

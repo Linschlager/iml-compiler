@@ -1,0 +1,21 @@
+program Playground() // Just a playground to test the compiler
+global
+    const x: int32;
+    const y: int32;
+
+    fun f(x: int32) returns const r: int32
+    do
+        r init := x * x
+    endfun;
+
+    proc update_y (x: int32, out var y: int32)
+    do
+        y := f(x)
+    endproc
+do
+    debugin x init;
+
+    // call update_y(x, y init);
+
+    debugout x
+endprogram

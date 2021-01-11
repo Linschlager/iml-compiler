@@ -14,6 +14,10 @@ public class IntCodeType implements ICodeType {
         return 1;
     }
 
+    public int getBits() {
+        return bits;
+    }
+
     @Override
     public String getName() {
         return String.format("int%d", bits);
