@@ -14,14 +14,21 @@ import ch.fhnw.lederer.virtualmachineFS2015.CodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.ICodeArray;
 import ch.fhnw.lederer.virtualmachineFS2015.VirtualMachine;
 
-import java.io.IOException;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
 
 public class Main {
+
+    private static ICodeArray compile(String programCode) throws LexicalError, GrammarError, ContextError, TypeError, ICodeArray.CodeTooSmallError {
+        ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
+        ITokenList tokens = new Scanner(programCode).scan();
+        ConcSyn.IProgram program = new Parser(tokens).parse();
+        AbsSyn.IProgram abstractProgram = program.toAbsSyn();
+        AbsSyn.IProgram validated = abstractProgram.check();
+        validated.code(codeArray, 0, new Environment(validated.getSymbolTable()));
+        codeArray.resize();
+        return codeArray;
+    }
 
     public static void main(String[] args) throws Exception {
         Test.test(); // Do extensive testing!
@@ -29,58 +36,24 @@ public class Main {
 
         // Find the first program of that name in the list of parsed programs
         var file = Path.of("programs-demo/Shapes.iml");
-        //var file = Path.of("programs-demo/BasicRecords.iml");
+        // var file = Path.of("programs-demo/BasicRecords.iml");
         // var file = Path.of("programs-demo/CompareVectors.iml");
-        //var file = Path.of("programs-demo/EEA.iml");
-        //var file = Path.of("programs-demo/factorialRec.iml");
-        //var file = Path.of("programs/Add17.iml");
-        //var file = Path.of("programs/Add17Fun.iml");
-        //var file = Path.of("programs/Factorial.iml");
-        //var file = Path.of("programs/IfCmd.iml");
-        //var file = Path.of("programs/WhileCmd.iml");
+        // var file = Path.of("programs-demo/EEA.iml");
+        // var file = Path.of("programs-demo/factorialRec.iml");
+        // var file = Path.of("programs/Add17.iml");
+        // var file = Path.of("programs/Add17Fun.iml");
+        // var file = Path.of("programs/Factorial.iml");
+        // var file = Path.of("programs/IfCmd.iml");
+        // var file = Path.of("programs/WhileCmd.iml");
 
-        var programToCompile = compile(file.getFileName().toString(), Files.readString(file));
-
-        ICodeArray codeArray = new CodeArray(100_000); // just make it large enough
-        programToCompile.code(codeArray, 0, new Environment(programToCompile.getSymbolTable()));
-        codeArray.resize();
-
-        new VirtualMachine(codeArray, 100_000);
-    }
-
-    private static AbsSyn.IProgram compile(String fileName, String programCode) {
         try {
-            ITokenList tokens = new Scanner(programCode).scan();
-            ConcSyn.IProgram program = new Parser(tokens).parse();
-            AbsSyn.IProgram abstractProgram = program.toAbsSyn();
-            AbsSyn.IProgram validatedAbstractProgram = abstractProgram.check();
+            var codeArray = compile(Files.readString(file));
+            System.out.println(codeArray.toString());
+            new VirtualMachine(codeArray, 100_000);
 
-            return validatedAbstractProgram;
-        } catch (GrammarError | LexicalError | ContextError | TypeError e) {
-            System.out.printf("Error compiling '%s'%n", fileName);
+        } catch (GrammarError | LexicalError | ContextError | TypeError | ICodeArray.CodeTooSmallError e) {
+            System.out.printf("Error compiling '%s'%n", file.getFileName().toString());
             e.printStackTrace();
         }
-        return null;
-    }
-
-    private static Map<String, AbsSyn.IProgram> compileAllPrograms() throws IOException {
-        Map<String, AbsSyn.IProgram> allPrograms = new HashMap<>();
-
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("programs"))) {
-            for (Path file : stream) {
-                var output = Files.readString(file);
-                String fileName = file.getFileName().toString();
-                allPrograms.put(fileName, compile(fileName, output));
-            }
-        }
-
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of("programs-demo"))) {
-            for (Path file : stream) {
-                var output = Files.readString(file);
-                String fileName = file.getFileName().toString();
-                allPrograms.put(fileName, compile(fileName, output));
-            }
-        }
-        return allPrograms;
     }
 }
