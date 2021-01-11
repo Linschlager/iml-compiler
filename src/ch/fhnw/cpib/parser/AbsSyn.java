@@ -1668,7 +1668,6 @@ public class AbsSyn {
                     FunctionDeclaration declaration1 = (FunctionDeclaration) declaration;
                     procedureMap.get(declaration1.name).address = location;
                     if (!declaration1.globalImports.isEmpty()) throw new RuntimeException("global imports not yet supported!");
-                    if (!declaration1.localImports.isEmpty()) throw new RuntimeException("local variables not yet supported!");
 
                     int relAddress = 0;
 
@@ -1687,6 +1686,17 @@ public class AbsSyn {
                     int returnSize = returnSignature.getType().getSize();
 
                     returnSignature.setAddr(relAddress - returnSize);
+
+                    // local vars
+                    int localStoreOffset = 3; // +2 for stored references of ep and pc above fp
+                    for (IStorageDeclaration localStore : declaration1.localImports) {
+                        VariableSignature signature = declaration1.symbolTable.get(localStore.getName());
+                        int storeSize = signature.getType().getSize();
+
+                        signature.setAddr(localStoreOffset);
+                        codeArray.put(location++, new IInstructions.AllocBlock(storeSize));
+                        localStoreOffset += storeSize;
+                    }
 
                     var localEnv = new Environment(declaration1.symbolTable);
 
