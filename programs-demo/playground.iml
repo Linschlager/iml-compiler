@@ -1,12 +1,16 @@
 program Playground() // Just a playground to test the compiler
 global
-    record p(x: int32);
+    record p(x: int32, y: int32);
     const x: int32;
+    const y: int32;
 
-    fun wrap(x: int32) returns const r: p do
-        r init := p(x)
+    fun wrap() returns const r: p
+    global x, y
+    do
+        r init := p(x, y)
     endfun
 do
     debugin x init;
-    debugout wrap(x)
+    debugin y init;
+    debugout wrap()
 endprogram

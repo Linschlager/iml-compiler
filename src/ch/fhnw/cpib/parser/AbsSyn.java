@@ -1403,8 +1403,6 @@ public class AbsSyn {
                     codeArray.put(location++, new IInstructions.LoadImInt(i-1)); // add offset for current field
                     codeArray.put(location++, new IInstructions.AddInt());
 
-                    // TODO swap stack[n] with stack[n-1]
-
                     codeArray.put(location++, new IInstructions.StoreRev()); // store reversed
                 }
             } else {
@@ -1649,7 +1647,8 @@ public class AbsSyn {
                 codeArray.put(location++, new IInstructions.OutputBool(expression.toString()));
             } else if (type instanceof RecordCodeType) {
                 List<FieldDesc> fieldNames = getRecordFieldNames(type.getName());
-                for (var fieldDesc : fieldNames) {
+                for (int i = fieldNames.size() - 1; i >= 0; i--) {
+                    var fieldDesc = fieldNames.get(i);
                     if (fieldDesc.isInt) {
                         codeArray.put(location++, new IInstructions.OutputInt(fieldDesc.name));
                     } else {
@@ -1786,9 +1785,9 @@ public class AbsSyn {
                     // set addresses for global imports
                     for (int i = declaration1.globalImports.size() - 1; i >= 0; i--) {
                         IGlobalImport imp = declaration1.globalImports.get(i);
+                        VariableSignature globalSignature = getSymbolTable().get(imp.getName());
                         VariableSignature signature = declaration1.symbolTable.get(imp.getName());
-                        relAddress -= 1; // All relative addresses have size 1 (just the address)
-                        signature.setAddr(relAddress);
+                        signature.setAddr(globalSignature.getAddr());
                     }
 
                     // set addresses for params
@@ -1837,9 +1836,9 @@ public class AbsSyn {
                     // set addresses for global imports
                     for (int i = declaration1.globalImports.size() - 1; i >= 0; i--) {
                         IGlobalImport imp = declaration1.globalImports.get(i);
+                        VariableSignature globalSignature = getSymbolTable().get(imp.getName());
                         VariableSignature signature = declaration1.symbolTable.get(imp.getName());
-                        relAddress -= 1; // All relative addresses have size 1 (just the address)
-                        signature.setAddr(relAddress);
+                        signature.setAddr(globalSignature.getAddr());
                     }
 
                     // set addresses for params
