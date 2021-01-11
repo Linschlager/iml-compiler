@@ -28,8 +28,9 @@ public class Main {
         //Map<String, AbsSyn.IProgram> programMap = compileAllPrograms(); doesnt work, because it uses static variables
 
         // Find the first program of that name in the list of parsed programs
+        var file = Path.of("programs-demo/Shapes.iml");
         //var file = Path.of("programs-demo/BasicRecords.iml");
-        var file = Path.of("programs-demo/CompareVectors.iml");
+        // var file = Path.of("programs-demo/CompareVectors.iml");
         //var file = Path.of("programs-demo/EEA.iml");
         //var file = Path.of("programs-demo/factorialRec.iml");
         //var file = Path.of("programs/Add17.iml");

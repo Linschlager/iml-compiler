@@ -22,7 +22,7 @@ global
             q init := num1 divT num2;
             rest init := num1 modT num2;
 
-            // Swap variables in the loo
+            // Swap variables in the loop
             tmpX init := 0;
             tmpY init := 0;
 
