@@ -646,7 +646,7 @@ public class AbsSyn {
         public String toString() {
             return "StoreExpression{" +
                     "name='" + name + '\'' +
-                    ", init=" + init +
+                    ",init=" + init +
                     '}';
         }
 
