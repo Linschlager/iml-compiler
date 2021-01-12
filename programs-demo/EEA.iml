@@ -49,7 +49,7 @@ global
                 x1 := x1 + num2
             endif;
             if y1 < 0 then
-                y1 := y1 + num2
+                y1 := y1 + num1
             endif;
 
             result init := eeaResult (b, x1, y1)
