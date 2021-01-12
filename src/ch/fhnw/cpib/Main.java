@@ -42,10 +42,10 @@ public class Main {
         // var file = Path.of("programs-demo/factorialRec.iml");
         // var file = Path.of("programs/Add17.iml");
         // var file = Path.of("programs/Add17Fun.iml");
+        // var file = Path.of("programs/Add17Proc4.iml");
         // var file = Path.of("programs/Factorial.iml");
         // var file = Path.of("programs/IfCmd.iml");
         // var file = Path.of("programs/WhileCmd.iml");
-        //var file = Path.of("programs/Add17Proc2.iml");
 
         try {
             var codeArray = compile(Files.readString(file));

@@ -725,10 +725,8 @@ public class AbsSyn {
                         codeArray.put(location++, new IInstructions.Deref());
                     }
                 } else {
-                    if (env.getIdentifierInfo(name).isDirectAccess) {
-                        location = codeLValue(codeArray, location, env);
-                        codeArray.put(location++, new IInstructions.Deref());
-                    }
+                    location = codeLValue(codeArray, location, env);
+                    codeArray.put(location++, new IInstructions.Deref());
                 }
                 return location;
             } catch (ContextError err) {
